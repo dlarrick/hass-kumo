@@ -57,17 +57,20 @@ class KumoJSThermostat(ClimateDevice):
     def state(self):
         """Return the current state."""
         if self.data is not None:
-            mode = self.data['r']['indoorUnit']['status']['mode']
-            if mode == 'off':
-                self._state = STATE_OFF
-            elif mode == 'cool':
-                self._state = STATE_COOL
-            elif mode == 'heat':
-                self._state = STATE_HEAT
-            elif mode == 'auto':
-                self._state = STATE_AUTO
-            elif mode == 'dry':
-                self._state = STATE_DRY
+            try:
+                mode = self.data['r']['indoorUnit']['status']['mode']
+                if mode == 'off':
+                    self._state = STATE_OFF
+                elif mode == 'cool':
+                    self._state = STATE_COOL
+                elif mode == 'heat':
+                    self._state = STATE_HEAT
+                elif mode == 'auto':
+                    self._state = STATE_AUTO
+                elif mode == 'dry':
+                    self._state = STATE_DRY
+            except KeyError:
+                pass
         else:
             self._state = None
         return self._state
@@ -92,7 +95,10 @@ class KumoJSThermostat(ClimateDevice):
     def current_operation(self):
         """Return current operation mode."""
         if self.data is not None:
-            self._current['operation'] = self.data['r']['indoorUnit']['status']['mode']
+            try:
+                self._current['operation'] = self.data['r']['indoorUnit']['status']['mode']
+            except KeyError:
+                pass
         else:
             self._current['operation'] = None
         return self._current['operation']
@@ -106,7 +112,10 @@ class KumoJSThermostat(ClimateDevice):
     def current_fan_mode(self):
         """Return current fan setting."""
         if self.data is not None:
-            self._current['fan_mode'] = self.data['r']['indoorUnit']['status']['fanSpeed']
+            try:
+                self._current['fan_mode'] = self.data['r']['indoorUnit']['status']['fanSpeed']
+            except KeyError:
+                pass
         else:
             self._current['fan_mode'] = None
         return self._current['fan_mode']
@@ -120,7 +129,10 @@ class KumoJSThermostat(ClimateDevice):
     def current_swing_mode(self):
         """Return current swing setting."""
         if self.data is not None:
-            self._current['swing_mode'] = self.data['r']['indoorUnit']['status']['vaneDir']
+            try:
+                self._current['swing_mode'] = self.data['r']['indoorUnit']['status']['vaneDir']
+            except KeyError:
+                pass
         else:
             self._current['swing_mode'] = None
         return self._current['swing_mode']
@@ -134,7 +146,10 @@ class KumoJSThermostat(ClimateDevice):
     def current_temperature(self):
         """Return the current temperature."""
         if self.data is not None:
-            self._current['temperature'] = self.data['r']['indoorUnit']['status']['roomTemp']
+            try:
+                self._current['temperature'] = self.data['r']['indoorUnit']['status']['roomTemp']
+            except KeyError:
+                pass
         else:
             self._current['temperature'] = None
         return self._current['temperature']
@@ -146,16 +161,19 @@ class KumoJSThermostat(ClimateDevice):
             self._target_temperature = None
             return None
 
-        idumode = self.data['r']['indoorUnit']['status']['mode']
-        if idumode == 'heat':
-            mode = 'spHeat'
-        elif idumode == 'cool':
-            mode = 'spCool'
-        else:
-            self._target_temperature = None
-            return None
+        try:
+            idumode = self.data['r']['indoorUnit']['status']['mode']
+            if idumode == 'heat':
+                mode = 'spHeat'
+            elif idumode == 'cool':
+                mode = 'spCool'
+            else:
+                self._target_temperature = None
+                return None
 
-        self._target_temperature = self.data['r']['indoorUnit']['status'][mode]
+            self._target_temperature = self.data['r']['indoorUnit']['status'][mode]
+        except KeyError:
+            pass
         return self._target_temperature
 
     @property
@@ -172,12 +190,15 @@ class KumoJSThermostat(ClimateDevice):
         # Set requires temp in F
         temperature_f = (temperature * 1.8) + 32
 
-        idumode = self.data['r']['indoorUnit']['status']['mode']
-        if idumode == 'heat':
-            mode = 'heat'
-        elif idumode == 'cool':
-            mode = 'cool'
-        else:
+        try:
+            idumode = self.data['r']['indoorUnit']['status']['mode']
+            if idumode == 'heat':
+                mode = 'heat'
+            elif idumode == 'cool':
+                mode = 'cool'
+            else:
+                return
+        except KeyError:
             return
 
         req = urllib.request.Request(

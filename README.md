@@ -22,6 +22,7 @@ And change the `name` and `host` as needed.
 ## TODO
 - Auto-discovery of mini-split units from KumoJS's list
 - Reverse-engineer what KumoJS is doing into a Python module, and interface with it directly
+- Code cleanup. Code reviews welcome!
 
 ## License
 [MIT](LICENSE)
