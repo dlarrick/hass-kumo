@@ -1,0 +1,8 @@
+{
+    "domain": "kumojs",
+    "name": "Kumo JS",
+    "documentation": "https://github.com/dlarrick/hass-kumo"
+    "dependencies": [],
+    "codeowners": [],
+    "requirements": []
+}
