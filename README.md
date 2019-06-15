@@ -24,5 +24,8 @@ And change the `name` and `host` as needed.
 - Reverse-engineer what KumoJS is doing into a Python module, and interface with it directly
 - Code cleanup. Code reviews welcome!
 
+## Status
+- As of June 2019, this module has been working fine for me for several months. I have no current plans to implement the TODO list but will accept patches.
+
 ## License
 [MIT](LICENSE)
