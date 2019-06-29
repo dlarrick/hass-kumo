@@ -10,6 +10,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components.climate import(ClimateDevice, PLATFORM_SCHEMA)
 from homeassistant.const import (STATE_OFF)
 from homeassistant.components.climate.const import(
+    ATTR_OPERATION_MODE,
     STATE_HEAT, STATE_COOL, STATE_DRY, STATE_AUTO,
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_OPERATION_MODE, SUPPORT_FAN_MODE, SUPPORT_SWING_MODE)
 from homeassistant.const import (
@@ -190,25 +191,38 @@ class KumoJSThermostat(ClimateDevice):
         # Set requires temp in F
         temperature_f = (temperature * 1.8) + 32
 
-        try:
-            idumode = self.data['r']['indoorUnit']['status']['mode']
-            if idumode == 'heat':
-                mode = 'heat'
-            elif idumode == 'cool':
-                mode = 'cool'
-            else:
+        mode_to_set = kwargs.get(ATTR_OPERATION_MODE)
+
+        if mode_to_set is None:
+            try:
+                idumode = self.data['r']['indoorUnit']['status']['mode']
+                if idumode == 'heat':
+                    mode = 'heat'
+                elif idumode == 'cool':
+                    mode = 'cool'
+                else:
+                    _LOGGER.warning("KumoJS %s not setting target temperature for current mode %s",
+                                    self._name, mode_to_set)
+                    return
+            except KeyError:
                 return
-        except KeyError:
-            return
+        else:
+            if mode_to_set == 'heat' or mode_to_set == 'cool':
+                mode = mode_to_set
+            else:
+                _LOGGER.warning("KumoJS %s not setting target temperature for supplied mode %s",
+                                self._name, mode_to_set)
+                return
 
         req = urllib.request.Request(
             'http://' + self.host + ':8084/v0/room/' +
             urllib.parse.quote(self.name) + '/' + mode +
             '/temp/' + str(temperature_f), method='PUT')
+        _LOGGER.info("KumoJS %s set temp: %s", self._name, str(temperature_f))
         response = urlopen(req)
         self._target_temperature = temperature
         string = response.read().decode('utf-8')
-        _LOGGER.info("KumoJS set temp response: %s", string)
+        _LOGGER.info("KumoJS %s set temp response: %s", self._name, string)
 
     def set_operation_mode(self, operation_mode):
         """Set new target operation mode"""
@@ -229,7 +243,7 @@ class KumoJSThermostat(ClimateDevice):
         response = urlopen(req)
         self._current['operation'] = mode
         string = response.read().decode('utf-8')
-        _LOGGER.info("KumoJS set mode response: %s", string)
+        _LOGGER.info("KumoJS %s set mode response: %s", self._name, string)
 
     def set_swing_mode(self, swing_mode):
         """Set new vane swing mode"""
@@ -240,7 +254,7 @@ class KumoJSThermostat(ClimateDevice):
         response = urlopen(req)
         self._current['swing_mode'] = swing_mode
         string = response.read().decode('utf-8')
-        _LOGGER.info("KumoJS set swing mode response: %s", string)
+        _LOGGER.info("KumoJS %s set swing mode response: %s", self._name, string)
 
     def set_fan_mode(self, fan_mode):
         """Set new fan speed mode"""
@@ -251,12 +265,12 @@ class KumoJSThermostat(ClimateDevice):
         response = urlopen(req)
         self._current['fan_mode'] = fan_mode
         string = response.read().decode('utf-8')
-        _LOGGER.info("KumoJS set fan speed response: %s", string)
+        _LOGGER.info("KumoJS %s set fan speed response: %s", self._name, string)
 
     def update(self):
         """Get the latest data."""
         response = urlopen('http://' + self.host + ':8084/v0/room/' +
                            urllib.parse.quote(self.name) + "/status")
         string = response.read().decode('utf-8')
-        _LOGGER.info("KumoJS update: %s", string)
+        _LOGGER.info("KumoJS %s update: %s", self._name, string)
         self.data = json.loads(string)
