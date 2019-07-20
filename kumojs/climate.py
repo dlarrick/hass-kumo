@@ -218,7 +218,7 @@ class KumoJSThermostat(ClimateDevice):
             'http://' + self.host + ':8084/v0/room/' +
             urllib.parse.quote(self.name) + '/' + mode +
             '/temp/' + str(temperature_f), method='PUT')
-        _LOGGER.info("KumoJS %s set temp: %s", self._name, str(temperature_f))
+        _LOGGER.debug("KumoJS %s set temp: %s", self._name, str(temperature_f))
         response = urlopen(req)
         self._target_temperature = temperature
         string = response.read().decode('utf-8')
@@ -272,5 +272,5 @@ class KumoJSThermostat(ClimateDevice):
         response = urlopen('http://' + self.host + ':8084/v0/room/' +
                            urllib.parse.quote(self.name) + "/status")
         string = response.read().decode('utf-8')
-        _LOGGER.info("KumoJS %s update: %s", self._name, string)
+        _LOGGER.debug("KumoJS %s update: %s", self._name, string)
         self.data = json.loads(string)
