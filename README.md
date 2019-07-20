@@ -26,6 +26,7 @@ And change the `name` and `host` as needed.
 
 ## Status
 - As of June 2019, this module has been working fine for me for several months. I have no current plans to implement the TODO list but will accept patches.
+- As of July 20, 2019, the master branch contains a version compatible with the Climate 1.0 API (i.e. Home Assistant 0.96 and later). The `pre-0.96` branch contains the code compatible with older versions.
 
 ## License
 [MIT](LICENSE)
