@@ -8,11 +8,10 @@ import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 
 from homeassistant.components.climate import(ClimateDevice, PLATFORM_SCHEMA)
-from homeassistant.const import (STATE_OFF)
 from homeassistant.components.climate.const import(
-    ATTR_OPERATION_MODE,
-    STATE_HEAT, STATE_COOL, STATE_DRY, STATE_AUTO,
-    SUPPORT_TARGET_TEMPERATURE, SUPPORT_OPERATION_MODE, SUPPORT_FAN_MODE, SUPPORT_SWING_MODE)
+    SUPPORT_TARGET_TEMPERATURE, SUPPORT_FAN_MODE, SUPPORT_SWING_MODE,
+    HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL, HVAC_MODE_DRY,
+    ATTR_HVAC_MODE)
 from homeassistant.const import (
     TEMP_CELSIUS, ATTR_TEMPERATURE)
 
@@ -25,6 +24,21 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Required(CONF_NAME): cv.string,
 })
+
+HA_STATE_TO_KUMO = {
+    HVAC_MODE_HEAT_COOL: 'auto',
+    HVAC_MODE_COOL: 'cool',
+    HVAC_MODE_HEAT: 'heat',
+    HVAC_MODE_DRY: 'dry',
+    HVAC_MODE_OFF: 'off'
+}
+KUMO_STATE_TO_HA = {
+    'auto': HVAC_MODE_HEAT_COOL,
+    'cool': HVAC_MODE_COOL,
+    'heat': HVAC_MODE_HEAT,
+    'dry': HVAC_MODE_DRY,
+    'off': HVAC_MODE_OFF
+}
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the KumoJS thermostat."""
@@ -44,43 +58,20 @@ class KumoJSThermostat(ClimateDevice):
         self._current = {'temperature':  None,
                          'swing_mode': None,
                          'fan_mode': None,
-                         'operation': None}
+                         'hvac_mode': None}
         self._target_temperature = None
-        self._state = None
-        self._operation_list = ['auto', 'heat', 'cool', 'dry', 'off']
-        self._fan_list = ['auto', 'quiet', 'low', 'powerful', 'superPowerful']
-        self._swing_list = ['auto', 'horizontal', 'midhorizontal', 'midpoint', 'midvertical',
-                            'vertical', 'swing']
+        self._hvac_mode = HVAC_MODE_OFF
+        self._hvac_modes = ['auto', 'heat', 'cool', 'dry', 'off']
+        self._fan_modes = ['auto', 'quiet', 'low', 'powerful', 'superPowerful']
+        self._swing_modes = ['auto', 'horizontal', 'midhorizontal', 'midpoint', 'midvertical',
+                             'vertical', 'swing']
         self.data = None
         self.update()
 
     @property
-    def state(self):
-        """Return the current state."""
-        if self.data is not None:
-            try:
-                mode = self.data['r']['indoorUnit']['status']['mode']
-                if mode == 'off':
-                    self._state = STATE_OFF
-                elif mode == 'cool':
-                    self._state = STATE_COOL
-                elif mode == 'heat':
-                    self._state = STATE_HEAT
-                elif mode == 'auto':
-                    self._state = STATE_AUTO
-                elif mode == 'dry':
-                    self._state = STATE_DRY
-            except KeyError:
-                pass
-        else:
-            self._state = None
-        return self._state
-
-    @property
     def supported_features(self):
         """Return the list of supported features."""
-        return (SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE |
-                SUPPORT_FAN_MODE | SUPPORT_SWING_MODE)
+        return SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE | SUPPORT_SWING_MODE
 
     @property
     def name(self):
@@ -93,24 +84,28 @@ class KumoJSThermostat(ClimateDevice):
         return TEMP_CELSIUS
 
     @property
-    def current_operation(self):
-        """Return current operation mode."""
+    def hvac_mode(self):
+        """Return current hvac operation mode."""
         if self.data is not None:
             try:
-                self._current['operation'] = self.data['r']['indoorUnit']['status']['mode']
+                self._current['hvac_mode'] = self.data['r']['indoorUnit']['status']['mode']
             except KeyError:
                 pass
         else:
-            self._current['operation'] = None
-        return self._current['operation']
+            self._current['hvac_mode'] = None
+        try:
+            result = KUMO_STATE_TO_HA[self._current['hvac_mode']]
+        except KeyError:
+            result = HVAC_MODE_OFF
+        return result
 
     @property
-    def operation_list(self):
+    def hvac_modes(self):
         """Returns the list of available operation modes."""
-        return self._operation_list
+        return self._hvac_modes
 
     @property
-    def current_fan_mode(self):
+    def fan_mode(self):
         """Return current fan setting."""
         if self.data is not None:
             try:
@@ -122,12 +117,12 @@ class KumoJSThermostat(ClimateDevice):
         return self._current['fan_mode']
 
     @property
-    def fan_list(self):
+    def fan_modes(self):
         """Returns the list of available operation modes."""
-        return self._fan_list
+        return self._fan_modes
 
     @property
-    def current_swing_mode(self):
+    def swing_mode(self):
         """Return current swing setting."""
         if self.data is not None:
             try:
@@ -139,9 +134,9 @@ class KumoJSThermostat(ClimateDevice):
         return self._current['swing_mode']
 
     @property
-    def swing_list(self):
+    def swing_modes(self):
         """Returns the list of available operation modes."""
-        return self._swing_list
+        return self._swing_modes
 
     @property
     def current_temperature(self):
@@ -191,15 +186,16 @@ class KumoJSThermostat(ClimateDevice):
         # Set requires temp in F
         temperature_f = (temperature * 1.8) + 32
 
-        mode_to_set = kwargs.get(ATTR_OPERATION_MODE)
+        try:
+            mode_to_set = HA_STATE_TO_KUMO[kwargs.get(ATTR_HVAC_MODE)]
+        except KeyError:
+            mode_to_set = None
 
         if mode_to_set is None:
             try:
                 idumode = self.data['r']['indoorUnit']['status']['mode']
-                if idumode == 'heat':
-                    mode = 'heat'
-                elif idumode == 'cool':
-                    mode = 'cool'
+                if idumode in ('heat', 'cool'):
+                    mode = idumode
                 else:
                     _LOGGER.warning("KumoJS %s not setting target temperature for current mode %s",
                                     self._name, mode_to_set)
@@ -207,7 +203,7 @@ class KumoJSThermostat(ClimateDevice):
             except KeyError:
                 return
         else:
-            if mode_to_set == 'heat' or mode_to_set == 'cool':
+            if mode_to_set in ('heat', 'cool'):
                 mode = mode_to_set
             else:
                 _LOGGER.warning("KumoJS %s not setting target temperature for supplied mode %s",
@@ -224,24 +220,19 @@ class KumoJSThermostat(ClimateDevice):
         string = response.read().decode('utf-8')
         _LOGGER.info("KumoJS %s set temp response: %s", self._name, string)
 
-    def set_operation_mode(self, operation_mode):
+    def set_hvac_mode(self, hvac_mode):
         """Set new target operation mode"""
-        mode = "off"
-        if operation_mode == STATE_HEAT:
-            mode = "heat"
-        elif operation_mode == STATE_COOL:
-            mode = "cool"
-        elif operation_mode == STATE_DRY:
-            mode = "dry"
-        elif operation_mode == STATE_AUTO:
-            mode = "auto"
+        try:
+            mode = HA_STATE_TO_KUMO[hvac_mode]
+        except KeyError:
+            mode = "off"
 
         req = urllib.request.Request(
             'http://' + self.host + ':8084/v0/room/' +
             urllib.parse.quote(self.name) + '/mode/' + mode,
             method='PUT')
         response = urlopen(req)
-        self._current['operation'] = mode
+        self._current['hvac_mode'] = mode
         string = response.read().decode('utf-8')
         _LOGGER.info("KumoJS %s set mode response: %s", self._name, string)
 
