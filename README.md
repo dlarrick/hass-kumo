@@ -4,29 +4,51 @@ Home Assistant control of Mitsubishi mini-split units
 - For US (North American) market mini-splits with KumoCloud WiFi interface
 - Implements standard Home Assistant climate entities
 - Supports Mode (heat/cool etc.), setpoint, fan speed, and vane swing setting
-- Interfaces with [KumoJS](https://github.com/sushilks/kumojs) Node.js module, which actually communicates with the KumoCloud adapter.
+- Legacy version ("kumojs" platform) interfaces with [KumoJS](https://github.com/sushilks/kumojs) Node.js module, which actually communicates with the KumoCloud adapter.
+  - This version is working fine for several people
   - You should have KumoJS running as a server on a locally-accessible machine.
-  - Note: Node.js on Raspbian seems to be too old to run this server as of this writing (March 2019)
-- Based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example
+  - Note: KumoJS works fine under Node.js on Raspbian Buster
+  - This version will never be accepted into Home Assistant because it does
+    not meet the architectural guidelines
+- New version ("kumo" platform) utilizes [pykumo](https://github.com/dlarrick/pykumo) Python library
+  - Currently experimental, under development (August 2019)
+  - Design & implementation done to hopefully be accepted into Home Assistant natively
+- Both are based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example
 
-## Installation
+## Installation (Legacy version)
 Put the `climate.py` file in `custom_components/KumoJS` within your configuration directory. On Ubuntu or Raspbian for example: `~/.homeassistant/custom_components/KumoJS`. After that configure it in the `configuration.yaml` file:
 ```
 climate:
-  - platform: KumoJS
+  - platform: kumojs
     name: "Master BR"
-    host: 192.168.1.123
+    host: 192.168.1.42   <-- the KumoJS server
 ```
 And change the `name` and `host` as needed.
 
-## TODO
-- Auto-discovery of mini-split units from KumoJS's list
-- Reverse-engineer what KumoJS is doing into a Python module, and interface with it directly
+## Installation (New version)
+- Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it (TODO: where?)
+- Put the `climate.py` file in `custom_components/Kumo` within your configuration directory as above.
+- For now, generate a kumo.cfg using KumoJS's instructions
+- Add to your configuration file, for each indoor unit, some info from kumo.cfg fields:
+climate:
+  - platform: kumo
+    name: "Master BR"
+    address: 192.168.1.123   <-- the indoor unit
+    config: "{'w_param': 'hexstring', 's_param': int, 'password': 'string', 'cryto_serial': 'hexstring'}"
+```
+
+## TODO (New version)
+- Debugging
+- Cleanup and submission of pykumo module to PyPI
+- Fetching of configuration from KumoCloud account
+- Auto creation of climate entities from KumoCloud account
+- Explore if other local APIs are available to provide additional useful information
 - Code cleanup. Code reviews welcome!
 
 ## Status
 - As of June 2019, this module has been working fine for me for several months. I have no current plans to implement the TODO list but will accept patches.
 - As of July 20, 2019, the master branch contains a version compatible with the Climate 1.0 API (i.e. Home Assistant 0.96 and later). The `pre-0.96` branch contains the code compatible with older versions.
+- In August 2019 I began work to implement and switch to a native Python module.
 
 ## License
 [MIT](LICENSE)
