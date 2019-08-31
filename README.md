@@ -30,6 +30,7 @@ And change the `name` and `host` as needed.
 - Put the `climate.py` file in `custom_components/Kumo` within your configuration directory as above.
 - For now, generate a kumo.cfg using KumoJS's instructions
 - Add to your configuration file, for each indoor unit, some info from kumo.cfg fields:
+```
 climate:
   - platform: kumo
     name: "Master BR"
