@@ -35,7 +35,7 @@ climate:
   - platform: kumo
     name: "Master BR"
     address: 192.168.1.123   <-- the indoor unit
-    config: "{'w_param': 'hexstring', 's_param': int, 'password': 'string', 'cryto_serial': 'hexstring'}"
+    config: "{'w_param': 'hexstring', 's_param': int, 'password': 'string', 'crypto_serial': 'hexstring'}"
 ```
 
 ## TODO (New version)
