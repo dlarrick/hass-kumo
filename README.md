@@ -33,7 +33,8 @@ climate:
 - Cleanup and submission of pykumo module to PyPI
 - Fetching of configuration from KumoCloud account
 - Auto creation of climate entities from KumoCloud account
-- Explore if other local APIs are available to provide additional useful information
+- Provide some sensors (current temp, filterDirty, etc.)
+- Explore if other local APIs are available to provide additional useful information (remote sensor readings, whether unit is calling, etc.)
 - Code cleanup. Code reviews welcome!
 
 ## Status
