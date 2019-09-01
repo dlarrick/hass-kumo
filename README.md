@@ -15,19 +15,9 @@ Home Assistant control of Mitsubishi mini-split units
   - Design & implementation done to hopefully be accepted into Home Assistant natively
 - Both are based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example
 
-## Installation (Legacy version)
-Put the `climate.py` file in `custom_components/KumoJS` within your configuration directory. On Ubuntu or Raspbian for example: `~/.homeassistant/custom_components/KumoJS`. After that configure it in the `configuration.yaml` file:
-```
-climate:
-  - platform: kumojs
-    name: "Master BR"
-    host: 192.168.1.42   <-- the KumoJS server
-```
-And change the `name` and `host` as needed.
-
 ## Installation (New version)
-- Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it (TODO: where?)
-- Put the `climate.py` file in `custom_components/Kumo` within your configuration directory as above.
+- Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it. On my install that's `/srv/homeassistant/lib/python3.7/site-packages`. Note: eventually we'll submit this library to PyPI and won't need this step.
+- Put the `kumo` directory from here in `custom_components/kumo` within your configuration directory.
 - For now, generate a kumo.cfg using KumoJS's instructions
 - Add to your configuration file, for each indoor unit, some info from kumo.cfg fields:
 ```
