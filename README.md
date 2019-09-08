@@ -18,23 +18,16 @@ Home Assistant control of Mitsubishi mini-split units
 ## Installation (Native Python version)
 - Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it. On my install that's `/srv/homeassistant/lib/python3.7/site-packages`. Note: eventually we'll submit this library to PyPI and won't need this step.
 - Put the `kumo` directory from here in `custom_components/kumo` within your configuration directory.
-- For now, generate a kumo.cfg using KumoJS's instructions
-- Add to your configuration file, for each indoor unit, some info from kumo.cfg fields:
-```
-climate:
-  - platform: kumo
-    name: "Master BR"
-    address: 192.168.1.123   <-- the indoor unit
-    config: "{'w_param': 'hexstring', 's_param': int, 'password': 'string', 'crypto_serial': 'hexstring'}"
-```
+- Run the `kumo_cloud_setup.py` script, which will prompt for your KumoCloud username and password and
+  print out entries for your configuration.yaml
 
 ## TODO (New version)
 - Debugging
 - Cleanup and submission of pykumo module to PyPI
-- Fetching of configuration from KumoCloud account
 - Auto creation of climate entities from KumoCloud account
 - Provide some sensors (current temp, filterDirty, etc.)
 - Explore if other local APIs are available to provide additional useful information (remote sensor readings, whether unit is calling, etc.)
+- Use async web requests to prevent HA warnings "Updating state for [KumoThermostat] took 0.468 seconds. Please report platform to the developers at https://goo.gl/Nvioub"
 - Code cleanup. Code reviews welcome!
 
 ## Status
