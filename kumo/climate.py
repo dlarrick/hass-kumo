@@ -80,6 +80,12 @@ class KumoThermostat(ClimateDevice):
         return TEMP_CELSIUS
 
     @property
+    def current_humidity(self):
+        """Return the current humidity, if known."""
+        humidity = self._pykumo.get_current_humidity()
+        return humidity
+
+    @property
     def hvac_mode(self):
         """Return current hvac operation mode."""
         mode = self._pykumo.get_mode()
