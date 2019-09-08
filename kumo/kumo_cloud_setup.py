@@ -3,7 +3,6 @@
     section for the units found there
 """
 
-import json
 import getpass
 import requests
 
@@ -17,22 +16,22 @@ def main():
     headers = {'Accept': 'application/json, text/plain, */*',
                'Accept-Encoding': 'gzip, deflate, br',
                'Accept-Language': 'en-US,en',
-               'Content-Type': 'application/json' }
+               'Content-Type': 'application/json'}
     body = '{"username":"%s","password":"%s","appVersion":"2.2.0"}' % (username, password)
     response = requests.post(url, headers=headers, data=body)
 
-    KumoDict = response.json()
+    kumo_dict = response.json()
 
     print("# Configuration for Kumo units '%s' for %s" %
-          (KumoDict[2]['label'],KumoDict[0]['username']))
+          (kumo_dict[2]['label'], kumo_dict[0]['username']))
     print("climate:")
-    for child in KumoDict[2]['children']:
-        for serial, zone in child['zoneTable'].items():
+    for child in kumo_dict[2]['children']:
+        for zone in child['zoneTable'].values():
             print('  - platform: kumo')
             print('    name: "%s"' % zone['label'])
             print('    address: "%s"' % zone['address'])
             print('    config: \'{"password": "%s", "crypto_serial":"%s"}\'' %
                   (zone['password'], zone['cryptoSerial']))
- 
+
 if __name__ == '__main__':
     main()
