@@ -16,7 +16,10 @@ Home Assistant control of Mitsubishi mini-split units
 - Both are based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example
 
 ## Installation (Native Python version)
-- Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it. On my install that's `/srv/homeassistant/lib/python3.7/site-packages`. Note: eventually we'll submit this library to PyPI and won't need this step.
+- Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it. 
+  - On my install that's `/srv/homeassistant/lib/python3.7/site-packages`.
+  - Alternatively, make `custom_components/kumo/pykumo` directory and put `pykumo.py` and `__init__.py` in it, and in `climate.py` change the import to `from .pykumo import pykumo`. This method has been seen to work with hass.io installs.
+  - Note: eventually we'll submit this library to PyPI and won't need this step.
 - Put the `kumo` directory from here in `custom_components/kumo` within your configuration directory.
 - Run the `kumo_cloud_setup.py` script, which will prompt for your KumoCloud username and password and
   print out entries for your configuration.yaml
