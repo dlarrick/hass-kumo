@@ -16,21 +16,22 @@ Home Assistant control of Mitsubishi mini-split units
 - Both are based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example
 
 ## Installation (Native Python version)
-- Put the [pykumo](https://github.com/dlarrick/pykumo) library where HA can find it. 
-  - On my install that's `/srv/homeassistant/lib/python3.7/site-packages`.
-  - Alternatively, make `custom_components/kumo/pykumo` directory and put `pykumo.py` and `__init__.py` in it, and in `climate.py` change the import to `from .pykumo import pykumo`. This method has been seen to work with hass.io installs.
-  - Note: eventually we'll submit this library to PyPI and won't need this step.
 - Put the `kumo` directory from here in `custom_components/kumo` within your configuration directory.
-- Run the `kumo_cloud_setup.py` script, which will prompt for your KumoCloud username and password and
-  print out entries for your configuration.yaml
+- Make a `custom_components/kumo/pykumo` directory and put `pykumo.py` and `__init__.py` from [pykumo](https://github.com/dlarrick/pykumo) repo into it.
+  - Note: eventually we'll submit this library to PyPI and won't need this step.
+- Add the following lines to your configuration.yaml:
+```
+kumo:
+  username: !secret kumo_username
+  password: !secret kumo_password
+```
+- add those secrets to your secrets.yaml as usual
 
 ## TODO (New version)
 - Debugging
 - Cleanup and submission of pykumo module to PyPI
-- Auto creation of climate entities from KumoCloud account
 - Provide some sensors (current temp, filterDirty, etc.)
 - Explore if other local APIs are available to provide additional useful information (remote sensor readings, whether unit is calling, etc.)
-- Use async web requests to prevent HA warnings "Updating state for [KumoThermostat] took 0.468 seconds. Please report platform to the developers at https://goo.gl/Nvioub"
 - Code cleanup. Code reviews welcome!
 
 ## Status
