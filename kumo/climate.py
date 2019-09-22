@@ -13,7 +13,8 @@ from homeassistant.components.climate.const import(
 from homeassistant.const import (
     TEMP_CELSIUS, ATTR_TEMPERATURE)
 
-import pykumo
+from .pykumo import pykumo
+from . import KUMO_DATA
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,14 +43,16 @@ KUMO_STATE_TO_HA = {
     'off': HVAC_MODE_OFF
 }
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Set up a Kumo thermostat."""
-
-    name = config.get(CONF_NAME)
-    address = config.get(CONF_ADDRESS)
-    config_js = config.get(CONF_CONFIG)
-
-    add_devices([KumoThermostat(name, address, config_js)])
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Set up Kumo thermostats."""
+    data = hass.data[KUMO_DATA]
+    devices = []
+    names = data.get_account().get_indoor_units()
+    for name in names:
+        address = data.get_account().get_address(name)
+        credentials = data.get_account().get_credentials(name)
+        devices.append(KumoThermostat(name, address, credentials))
+    async_add_entities(devices)
 
 class KumoThermostat(ClimateDevice):
     """Representation of a Kumo Thermostat device."""
@@ -140,6 +143,12 @@ class KumoThermostat(ClimateDevice):
         else:
             temp = None
         return temp
+
+    @property
+    def battery_percent(self):
+        """ Return the battery percentage of the attached sensor (if any) """
+        percent = self._pykumo.get_sensor_battery()
+        return percent
 
     @property
     def should_poll(self):
