@@ -8,8 +8,8 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components.climate import(ClimateDevice, PLATFORM_SCHEMA)
 from homeassistant.components.climate.const import(
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_FAN_MODE, SUPPORT_SWING_MODE,
-    HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL, HVAC_MODE_DRY,
-    ATTR_HVAC_MODE)
+    HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL,
+    HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, ATTR_HVAC_MODE)
 from homeassistant.const import (
     TEMP_CELSIUS, ATTR_TEMPERATURE)
 
@@ -33,6 +33,7 @@ HA_STATE_TO_KUMO = {
     HVAC_MODE_COOL: 'cool',
     HVAC_MODE_HEAT: 'heat',
     HVAC_MODE_DRY: 'dry',
+    HVAC_MODE_FAN_ONLY: 'vent',
     HVAC_MODE_OFF: 'off'
 }
 KUMO_STATE_TO_HA = {
@@ -40,6 +41,7 @@ KUMO_STATE_TO_HA = {
     'cool': HVAC_MODE_COOL,
     'heat': HVAC_MODE_HEAT,
     'dry': HVAC_MODE_DRY,
+    'vent': HVAC_MODE_FAN_ONLY,
     'off': HVAC_MODE_OFF
 }
 
@@ -61,11 +63,19 @@ class KumoThermostat(ClimateDevice):
         """Initialize the thermostat."""
         self._name = name
         self._target_temperature = None
-        self._hvac_modes = ['auto', 'heat', 'cool', 'dry', 'off']
         self._fan_modes = ['auto', 'quiet', 'low', 'powerful', 'superPowerful']
         self._swing_modes = ['auto', 'horizontal', 'midhorizontal', 'midpoint', 'midvertical',
                              'vertical', 'swing']
         self._pykumo = pykumo.PyKumo(name, address, config_js)
+        self._hvac_modes = [HVAC_MODE_OFF, HVAC_MODE_COOL]
+        if self._pykumo.has_dry_mode():
+            self._hvac_modes.append(HVAC_MODE_DRY)
+        if self._pykumo.has_heat_mode():
+            self._hvac_modes.append(HVAC_MODE_HEAT)
+        if self._pykumo.has_vent_mode():
+            self._hvac_modes.append(HVAC_MODE_FAN_ONLY)
+        if self._pykumo.has_auto_mode():
+            self._hvac_modes.append(HVAC_MODE_HEAT_COOL)
 
     @property
     def supported_features(self):

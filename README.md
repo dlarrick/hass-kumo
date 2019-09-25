@@ -32,6 +32,7 @@ kumo:
 - Cleanup and submission of pykumo module to PyPI
 - Provide some sensors (current temp, filterDirty, etc.)
 - Explore if other local APIs are available to provide additional useful information (remote sensor readings, whether unit is calling, etc.)
+- Still seeing "Updating state for [this stuff] took 0.621 seconds" so need to make more use of async
 - Code cleanup. Code reviews welcome!
 
 ## Status
