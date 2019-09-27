@@ -9,7 +9,8 @@ from homeassistant.components.climate import(ClimateDevice, PLATFORM_SCHEMA)
 from homeassistant.components.climate.const import(
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_FAN_MODE, SUPPORT_SWING_MODE,
     HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL,
-    HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, ATTR_HVAC_MODE)
+    HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, ATTR_HVAC_MODE, CURRENT_HVAC_IDLE,
+    CURRENT_HVAC_COOL, CURRENT_HVAC_HEAT, CURRENT_HVAC_DRY, CURRENT_HVAC_OFF)
 from homeassistant.const import (
     TEMP_CELSIUS, ATTR_TEMPERATURE)
 
@@ -38,11 +39,23 @@ HA_STATE_TO_KUMO = {
 }
 KUMO_STATE_TO_HA = {
     'auto': HVAC_MODE_HEAT_COOL,
+    'autoCool': HVAC_MODE_HEAT_COOL,
+    'autoHeat': HVAC_MODE_HEAT_COOL,
     'cool': HVAC_MODE_COOL,
     'heat': HVAC_MODE_HEAT,
     'dry': HVAC_MODE_DRY,
     'vent': HVAC_MODE_FAN_ONLY,
     'off': HVAC_MODE_OFF
+}
+KUMO_STATE_TO_HA_ACTION = {
+    'auto': CURRENT_HVAC_IDLE,
+    'autoCool': CURRENT_HVAC_COOL,
+    'autoHeat': CURRENT_HVAC_HEAT,
+    'cool': CURRENT_HVAC_COOL,
+    'heat': CURRENT_HVAC_HEAT,
+    'dry': CURRENT_HVAC_DRY,
+    'vent': CURRENT_HVAC_IDLE,
+    'off': CURRENT_HVAC_OFF
 }
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -82,9 +95,14 @@ class KumoThermostat(ClimateDevice):
             self._hvac_modes.append(HVAC_MODE_FAN_ONLY)
         if self._pykumo.has_auto_mode():
             self._hvac_modes.append(HVAC_MODE_HEAT_COOL)
+        self._available = True
 
     def update(self):
         self._pykumo.poll_status()
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def supported_features(self):
@@ -109,12 +127,22 @@ class KumoThermostat(ClimateDevice):
 
     @property
     def hvac_mode(self):
-        """Return current hvac operation mode."""
+        """Return current hvac operation state."""
         mode = self._pykumo.get_mode()
         try:
             result = KUMO_STATE_TO_HA[mode]
         except KeyError:
             result = HVAC_MODE_OFF
+        return result
+
+    @property
+    def hvac_action(self):
+        """Return current hvac operation in action."""
+        mode = self._pykumo.get_mode()
+        try:
+            result = KUMO_STATE_TO_HA_ACTION[mode]
+        except KeyError:
+            result = None
         return result
 
     @property
