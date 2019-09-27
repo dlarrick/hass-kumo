@@ -1,6 +1,7 @@
 """ HomeAssistant climate component for KumoCloud connected HVAC units
 """
 import logging
+import pprint
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
@@ -10,7 +11,8 @@ from homeassistant.components.climate.const import(
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_FAN_MODE, SUPPORT_SWING_MODE,
     HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL,
     HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, ATTR_HVAC_MODE, CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_COOL, CURRENT_HVAC_HEAT, CURRENT_HVAC_DRY, CURRENT_HVAC_OFF)
+    CURRENT_HVAC_COOL, CURRENT_HVAC_HEAT, CURRENT_HVAC_DRY, CURRENT_HVAC_OFF,
+    SUPPORT_TARGET_TEMPERATURE_RANGE)
 from homeassistant.const import (
     TEMP_CELSIUS, ATTR_TEMPERATURE)
 
@@ -107,7 +109,8 @@ class KumoThermostat(ClimateDevice):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE | SUPPORT_SWING_MODE
+        return ( SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE |
+                 SUPPORT_SWING_MODE | SUPPORT_TARGET_TEMPERATURE_RANGE )
 
     @property
     def name(self):
@@ -183,10 +186,30 @@ class KumoThermostat(ClimateDevice):
         """Return the temperature we try to reach."""
         temp = None
         idumode = self.hvac_mode
-        if idumode == 'heat':
+        if idumode == HVAC_MODE_HEAT:
             temp = self._pykumo.get_heat_setpoint()
-        elif idumode == 'cool':
+        elif idumode == HVAC_MODE_COOL:
             temp = self._pykumo.get_cool_setpoint()
+        else:
+            temp = None
+        return temp
+
+    @property
+    def target_temperature_high(self):
+        temp = None
+        idumode = self.hvac_mode
+        if idumode == HVAC_MODE_HEAT_COOL:
+            temp = self._pykumo.get_cool_setpoint()
+        else:
+            temp = None
+        return temp
+
+    @property
+    def target_temperature_low(self):
+        temp = None
+        idumode = self.hvac_mode
+        if idumode == HVAC_MODE_HEAT_COOL:
+            temp = self._pykumo.get_heat_setpoint()
         else:
             temp = None
         return temp
@@ -204,8 +227,17 @@ class KumoThermostat(ClimateDevice):
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
-        temperature = kwargs.get(ATTR_TEMPERATURE)
-        if temperature is None:
+        _LOGGER.debug("Kumo %s set temp: %s", self._name, 
+                pprint.pformat(kwargs))
+        target = {}
+        if 'target_temp_high' in kwargs:
+            target['cool'] = kwargs['target_temp_high']
+        if 'target_temp_low' in kwargs:
+            target['heat'] = kwargs['target_temp_low']
+        if 'temperature' in kwargs:
+            target['setpoint'] = kwargs['temperature']
+        if len(target) == 0:
+            _LOGGER.debug("Kumo %s set temp: no temp in args", self._name)
             return
 
         try:
@@ -216,16 +248,19 @@ class KumoThermostat(ClimateDevice):
         if mode_to_set is None:
             mode_to_set = self.hvac_mode
 
-        if mode_to_set not in ('heat', 'cool'):
+        if mode_to_set not in (HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT):
             _LOGGER.warning("Kumo %s not setting target temperature for mode %s",
                             self._name, mode_to_set)
             return
 
-        if mode_to_set == 'heat':
-            response = self._pykumo.set_heat_setpoint(temperature)
+        if mode_to_set == HVAC_MODE_HEAT:
+            response = self._pykumo.set_heat_setpoint(target['setpoint'])
+        elif mode_to_set == HVAC_MODE_COOL:
+            response = self._pykumo.set_cool_setpoint(target['setpoint'])
         else:
-            response = self._pykumo.set_cool_setpoint(temperature)
-        _LOGGER.debug("Kumo %s set temp: %s C", self._name, str(temperature))
+            response = self._pykumo.set_heat_setpoint(target['heat'])
+            response += " " + self._pykumo.set_cool_setpoint(['cool'])
+        _LOGGER.debug("Kumo %s set temp: %s C", self._name, target)
         _LOGGER.info("Kumo %s set temp response: %s", self._name, response)
 
     def set_hvac_mode(self, hvac_mode):
