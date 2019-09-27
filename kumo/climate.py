@@ -47,6 +47,9 @@ KUMO_STATE_TO_HA = {
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats."""
+    if KumoThermostat._platform_is_setup == True:
+        return
+    KumoThermostat._platform_is_setup = True
     data = hass.data[KUMO_DATA]
     devices = []
     names = data.get_account().get_indoor_units()
@@ -54,10 +57,13 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         address = data.get_account().get_address(name)
         credentials = data.get_account().get_credentials(name)
         devices.append(KumoThermostat(name, address, credentials))
+    _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
 class KumoThermostat(ClimateDevice):
     """Representation of a Kumo Thermostat device."""
+
+    _platform_is_setup = False
 
     def __init__(self, name, address, config_js):
         """Initialize the thermostat."""
