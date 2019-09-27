@@ -20,6 +20,7 @@ from .pykumo import pykumo
 from . import KUMO_DATA
 
 _LOGGER = logging.getLogger(__name__)
+__PLATFORM_IS_SET_UP = False
 
 CONF_NAME = 'name'
 CONF_ADDRESS = 'address'
@@ -62,9 +63,13 @@ KUMO_STATE_TO_HA_ACTION = {
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats."""
-    if KumoThermostat._platform_is_setup == True:
+
+    # Run once
+    global __PLATFORM_IS_SET_UP
+    if __PLATFORM_IS_SET_UP == True:
         return
-    KumoThermostat._platform_is_setup = True
+    __PLATFORM_IS_SET_UP = True
+
     data = hass.data[KUMO_DATA]
     devices = []
     names = data.get_account().get_indoor_units()
@@ -78,7 +83,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 class KumoThermostat(ClimateDevice):
     """Representation of a Kumo Thermostat device."""
 
-    _platform_is_setup = False
+    _update_properties = [ 'current_humidity', 'hvac_mode', 
+            'hvac_action', 'fan_mode', 'swing_mode', 
+            'current_temperature', 'target_temperature', 
+            'target_temperature_high', 'target_temperature_low', 
+            'battery_percent'
+            ]
 
     def __init__(self, name, address, config_js):
         """Initialize the thermostat."""
@@ -97,11 +107,33 @@ class KumoThermostat(ClimateDevice):
             self._hvac_modes.append(HVAC_MODE_FAN_ONLY)
         if self._pykumo.has_auto_mode():
             self._hvac_modes.append(HVAC_MODE_HEAT_COOL)
+        self._supported_features = ( 
+                SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE | 
+                SUPPORT_SWING_MODE | SUPPORT_TARGET_TEMPERATURE_RANGE 
+                )
+        for prop in KumoThermostat._update_properties:
+            try:
+                setattr(self, "_%s" % prop, None)
+            except AttributeError:
+                _LOGGER.debug("Kumo %s: Initializing attr %s error: %s", 
+                        self._name, prop)
+
         self._available = True
 
     def update(self):
         """Called by HA to trigger a refresh of cached state."""
-        self._pykumo.poll_status()
+        for prop in KumoThermostat._update_properties:
+            self._update_property(prop)
+
+    def _update_property(self, prop):
+        """Called to refresh the value of a property -- may block on I/O"""
+        try:
+            do_update = getattr(self, "_update_%s" % prop)
+        except AttributeError:
+            _LOGGER.debug("Kumo %s: %s property updater not implemented", 
+                    self._name, prop)
+            return
+        do_update()
 
     @property
     def available(self):
@@ -113,8 +145,7 @@ class KumoThermostat(ClimateDevice):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return ( SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE |
-                 SUPPORT_SWING_MODE | SUPPORT_TARGET_TEMPERATURE_RANGE )
+        return self._supported_features
 
     @property
     def name(self):
@@ -129,28 +160,39 @@ class KumoThermostat(ClimateDevice):
     @property
     def current_humidity(self):
         """Return the current humidity, if known."""
-        humidity = self._pykumo.get_current_humidity()
-        return humidity
+        return self._current_humidity
+
+    def _update_current_humidity(self):
+        """Refresh cached current humidity."""
+        self._current_humidity = self._pykumo.get_current_humidity()
 
     @property
     def hvac_mode(self):
         """Return current hvac operation state."""
+        return self._hvac_mode
+
+    def _update_hvac_mode(self):
+        """Refresh cached hvac mode."""
         mode = self._pykumo.get_mode()
         try:
             result = KUMO_STATE_TO_HA[mode]
         except KeyError:
-            result = HVAC_MODE_OFF
-        return result
+            result = None
+        self._hvac_mode = result
 
     @property
     def hvac_action(self):
         """Return current hvac operation in action."""
+        return self._hvac_action
+
+    def _update_hvac_action(self):
+        """Refresh cached hvac action"""
         mode = self._pykumo.get_mode()
         try:
             result = KUMO_STATE_TO_HA_ACTION[mode]
         except KeyError:
             result = None
-        return result
+        self._hvac_action = result
 
     @property
     def hvac_modes(self):
@@ -160,8 +202,11 @@ class KumoThermostat(ClimateDevice):
     @property
     def fan_mode(self):
         """Return current fan setting."""
-        fan_mode = self._pykumo.get_fan_speed()
-        return fan_mode
+        return self._fan_mode
+
+    def _update_fan_mode(self):
+        """Refresh cached fan mode"""
+        self._fan_mode = self._pykumo.get_fan_speed()
 
     @property
     def fan_modes(self):
@@ -171,8 +216,11 @@ class KumoThermostat(ClimateDevice):
     @property
     def swing_mode(self):
         """Return current swing setting."""
-        swing_mode = self._pykumo.get_vane_direction()
-        return swing_mode
+        return self._swing_mode
+
+    def _update_swing_mode(self):
+        """Refresh cached swing mode"""
+        self._swing_mode = self._pykumo.get_vane_direction()
 
     @property
     def swing_modes(self):
@@ -182,12 +230,19 @@ class KumoThermostat(ClimateDevice):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        temp = self._pykumo.get_current_temperature()
-        return temp
+        return self._current_temperature
+
+    def _update_current_temperature(self):
+        """Refresh cached current temperature"""
+        self._current_temperature = self._pykumo.get_current_temperature()
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
+        return self._target_temperature
+
+    def _update_target_temperature(self):
+        """Refresh the cached target temperature."""
         temp = None
         idumode = self.hvac_mode
         if idumode == HVAC_MODE_HEAT:
@@ -196,33 +251,45 @@ class KumoThermostat(ClimateDevice):
             temp = self._pykumo.get_cool_setpoint()
         else:
             temp = None
-        return temp
+        self._target_temperature = temp
 
     @property
     def target_temperature_high(self):
         """Return the high dual setpoint temperature."""
+        return self._target_temperature_high
+
+    def _update_target_temperature_high(self):
+        """Refresh the cached target cooling setpoint"""
         temp = None
         idumode = self.hvac_mode
         if idumode == HVAC_MODE_HEAT_COOL:
             temp = self._pykumo.get_cool_setpoint()
         else:
             temp = None
-        return temp
+        self._target_temperature_high = temp
 
     @property
     def target_temperature_low(self):
         """Return the low dual setpoint temperature."""
+        return self._target_temperature_low
+
+    def _update_target_temperature_low(self):
+        """Refresh the cached target heating setpoint"""
         temp = None
         idumode = self.hvac_mode
         if idumode == HVAC_MODE_HEAT_COOL:
             temp = self._pykumo.get_heat_setpoint()
         else:
             temp = None
-        return temp
+        self._target_temperature_low = temp
 
     @property
     def battery_percent(self):
         """ Return the battery percentage of the attached sensor (if any) """
+        return self._battery_percent
+
+    def _update_battery_percent(self):
+        """Refresh the cached battery percentage."""
         percent = self._pykumo.get_sensor_battery()
         return percent
 
