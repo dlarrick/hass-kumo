@@ -100,10 +100,14 @@ class KumoThermostat(ClimateDevice):
         self._available = True
 
     def update(self):
+        """Called by HA to trigger a refresh of cached state."""
         self._pykumo.poll_status()
 
     @property
     def available(self):
+        """Return whether Home Assistant is able to read the state and control
+        the underlying device.
+        """
         return self._available
 
     @property
@@ -196,6 +200,7 @@ class KumoThermostat(ClimateDevice):
 
     @property
     def target_temperature_high(self):
+        """Return the high dual setpoint temperature."""
         temp = None
         idumode = self.hvac_mode
         if idumode == HVAC_MODE_HEAT_COOL:
@@ -206,6 +211,7 @@ class KumoThermostat(ClimateDevice):
 
     @property
     def target_temperature_low(self):
+        """Return the low dual setpoint temperature."""
         temp = None
         idumode = self.hvac_mode
         if idumode == HVAC_MODE_HEAT_COOL:
