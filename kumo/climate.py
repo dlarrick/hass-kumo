@@ -187,11 +187,15 @@ class KumoThermostat(ClimateDevice):
 
     def _update_hvac_action(self):
         """Refresh cached hvac action"""
-        mode = self._pykumo.get_mode()
-        try:
-            result = KUMO_STATE_TO_HA_ACTION[mode]
-        except KeyError:
-            result = None
+        standby = self._pykumo.get_standby()
+        if standby == True:
+            result = CURRENT_HVAC_IDLE
+        else:
+            mode = self._pykumo.get_mode()
+            try:
+                result = KUMO_STATE_TO_HA_ACTION[mode]
+            except KeyError:
+                result = None
         self._hvac_action = result
 
     @property
