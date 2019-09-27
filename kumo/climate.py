@@ -77,6 +77,9 @@ class KumoThermostat(ClimateDevice):
         if self._pykumo.has_auto_mode():
             self._hvac_modes.append(HVAC_MODE_HEAT_COOL)
 
+    def update(self):
+        self._pykumo.poll_status()
+
     @property
     def supported_features(self):
         """Return the list of supported features."""
