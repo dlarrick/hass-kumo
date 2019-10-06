@@ -77,7 +77,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         address = data.get_account().get_address(name)
         credentials = data.get_account().get_credentials(name)
         devices.append(KumoThermostat(name, address, credentials))
-    _LOGGER.debug("Kumo adding entity: %s", name)
+        _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
 class KumoThermostat(ClimateDevice):
