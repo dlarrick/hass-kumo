@@ -72,10 +72,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     data = hass.data[KUMO_DATA]
     devices = []
-    names = data.get_account().get_indoor_units()
-    for name in names:
-        address = data.get_account().get_address(name)
-        credentials = data.get_account().get_credentials(name)
+    units = data.get_account().get_indoor_units()
+    for unit in units:
+        name = data.get_account().get_name(unit)
+        address = data.get_account().get_address(unit)
+        credentials = data.get_account().get_credentials(unit)
         devices.append(KumoThermostat(name, address, credentials))
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)

@@ -18,9 +18,10 @@ def main():
                'Accept-Language': 'en-US,en',
                'Content-Type': 'application/json'}
     body = '{"username":"%s","password":"%s","appVersion":"2.2.0"}' % (username, password)
+    print("body: %s" % str(body))
     response = requests.post(url, headers=headers, data=body)
-
     kumo_dict = response.json()
+    print("response: %s" % str(kumo_dict))
 
     print("# Configuration for Kumo units '%s' for %s" %
           (kumo_dict[2]['label'], kumo_dict[0]['username']))
