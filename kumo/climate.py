@@ -16,7 +16,6 @@ from homeassistant.components.climate.const import(
 from homeassistant.const import (
     TEMP_CELSIUS, ATTR_TEMPERATURE)
 
-from .pykumo import pykumo
 from . import KUMO_DATA
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,6 +92,8 @@ class KumoThermostat(ClimateDevice):
 
     def __init__(self, name, address, config_js):
         """Initialize the thermostat."""
+        import pykumo
+
         self._name = name
         self._target_temperature = None
         self._fan_modes = ['auto', 'quiet', 'low', 'powerful', 'superPowerful']

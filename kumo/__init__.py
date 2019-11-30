@@ -7,10 +7,10 @@ from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.util.json import save_json, load_json
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.discovery import async_load_platform
-from .pykumo import pykumo
 
 _LOGGER = logging.getLogger(__name__)
 
+REQUIREMENTS = ['pykumo==0.1.0']
 DOMAIN = "kumo"
 KUMO_DATA = "kumo_data"
 KUMO_CONFIG_CACHE = "kumo_cache.json"
@@ -53,6 +53,7 @@ async def async_setup(hass, config):
     Will create climate and sensor components to support
     devices listed on the provided Kumo Cloud account.
     """
+    import pykumo
 
     username = config[DOMAIN].get(CONF_USERNAME)
     password = config[DOMAIN].get(CONF_PASSWORD)
