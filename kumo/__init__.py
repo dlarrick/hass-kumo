@@ -14,6 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "kumo"
 KUMO_DATA = "kumo_data"
 KUMO_CONFIG_CACHE = "kumo_cache.json"
+CONF_PREFER_CACHE = "prefer_cache"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -21,6 +22,7 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Required(CONF_USERNAME): cv.string,
                 vol.Required(CONF_PASSWORD): cv.string,
+                vol.Optional(CONF_PREFER_CACHE, default=False): cv.boolean,
             }
         )
     },
@@ -54,18 +56,21 @@ async def async_setup(hass, config):
 
     username = config[DOMAIN].get(CONF_USERNAME)
     password = config[DOMAIN].get(CONF_PASSWORD)
-    # Check if account retrieved units successfully.
-    # If so, cache raw JSON in config file.
-    # If not, load raw JSON from cached config file.
+    prefer_cache = config[DOMAIN].get(CONF_PREFER_CACHE)
+
+    # Read config from either remote KumoCloud server or
+    # cached JSON.
+    cached_json = {}
+    if prefer_cache:
+        cached_json = await hass.async_add_executor_job(
+            load_json, hass.config.path(KUMO_CONFIG_CACHE))
     account = pykumo.KumoCloudAccount(username, password)
-    if account.try_setup():
+    if not cached_json and account.try_setup():
         await hass.async_add_executor_job(
             save_json, hass.config.path(KUMO_CONFIG_CACHE),
             account.get_raw_json())
         _LOGGER.info("Loaded config from KumoCloud server")
     else:
-        cached_json = await hass.async_add_executor_job(
-            load_json, hass.config.path(KUMO_CONFIG_CACHE))
         if cached_json:
             account = pykumo.KumoCloudAccount(
                 username, password, kumo_dict=cached_json)
