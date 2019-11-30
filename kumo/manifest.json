@@ -4,5 +4,5 @@
     "documentation": "https://github.com/dlarrick/hass-kumo",
     "dependencies": [],
     "codeowners": [],
-    "requirements": []
+    "requirements": ["pykumo==0.1.0"]
 }
