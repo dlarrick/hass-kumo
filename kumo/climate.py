@@ -13,8 +13,7 @@ from homeassistant.components.climate.const import(
     HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, ATTR_HVAC_MODE, CURRENT_HVAC_IDLE,
     CURRENT_HVAC_COOL, CURRENT_HVAC_HEAT, CURRENT_HVAC_DRY, CURRENT_HVAC_OFF,
     SUPPORT_TARGET_TEMPERATURE_RANGE)
-from homeassistant.const import (
-    TEMP_CELSIUS, ATTR_TEMPERATURE)
+from homeassistant.const import (TEMP_CELSIUS)
 
 from . import KUMO_DATA
 
@@ -65,7 +64,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     # Run once
     global __PLATFORM_IS_SET_UP
-    if __PLATFORM_IS_SET_UP == True:
+    if __PLATFORM_IS_SET_UP:
         return
     __PLATFORM_IS_SET_UP = True
 
@@ -83,12 +82,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 class KumoThermostat(ClimateDevice):
     """Representation of a Kumo Thermostat device."""
 
-    _update_properties = [ 'current_humidity', 'hvac_mode', 
-            'hvac_action', 'fan_mode', 'swing_mode', 
-            'current_temperature', 'target_temperature', 
-            'target_temperature_high', 'target_temperature_low', 
-            'battery_percent'
-            ]
+    _update_properties = ['current_humidity', 'hvac_mode',
+                          'hvac_action', 'fan_mode', 'swing_mode',
+                          'current_temperature', 'target_temperature',
+                          'target_temperature_high', 'target_temperature_low',
+                          'battery_percent']
 
     def __init__(self, name, address, config_js):
         """Initialize the thermostat."""
@@ -96,11 +94,21 @@ class KumoThermostat(ClimateDevice):
 
         self._name = name
         self._target_temperature = None
-        self._fan_modes = ['auto', 'quiet', 'low', 'powerful', 'superPowerful']
-        self._swing_modes = ['auto', 'horizontal', 'midhorizontal', 'midpoint', 'midvertical',
-                             'vertical', 'swing']
+        self._target_temperature_low = None
+        self._target_temperature_high = None
+        self._current_humidity = None
+        self._hvac_mode = None
+        self._hvac_action = None
+        self._fan_mode = None
+        self._swing_mode = None
+        self._current_temperature = None
+        self._battery_percent = None
         self._pykumo = pykumo.PyKumo(name, address, config_js)
+        self._fan_modes = self._pykumo.get_fan_speeds()
+        self._swing_modes = self._pykumo.get_vane_directions()
         self._hvac_modes = [HVAC_MODE_OFF, HVAC_MODE_COOL]
+        self._supported_features = (
+            SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE)
         if self._pykumo.has_dry_mode():
             self._hvac_modes.append(HVAC_MODE_DRY)
         if self._pykumo.has_heat_mode():
@@ -109,16 +117,15 @@ class KumoThermostat(ClimateDevice):
             self._hvac_modes.append(HVAC_MODE_FAN_ONLY)
         if self._pykumo.has_auto_mode():
             self._hvac_modes.append(HVAC_MODE_HEAT_COOL)
-        self._supported_features = ( 
-                SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE | 
-                SUPPORT_SWING_MODE | SUPPORT_TARGET_TEMPERATURE_RANGE 
-                )
+            self._supported_features |= SUPPORT_TARGET_TEMPERATURE_RANGE
+        if self._pykumo.has_vane_direction():
+            self._supported_features |= SUPPORT_SWING_MODE
         for prop in KumoThermostat._update_properties:
             try:
                 setattr(self, "_%s" % prop, None)
-            except AttributeError:
-                _LOGGER.debug("Kumo %s: Initializing attr %s error: %s", 
-                        self._name, prop)
+            except AttributeError as err:
+                _LOGGER.debug("Kumo %s: Initializing attr %s error: %s",
+                              self._name, prop, str(err))
 
         self._available = True
 
@@ -132,8 +139,8 @@ class KumoThermostat(ClimateDevice):
         try:
             do_update = getattr(self, "_update_%s" % prop)
         except AttributeError:
-            _LOGGER.debug("Kumo %s: %s property updater not implemented", 
-                    self._name, prop)
+            _LOGGER.debug("Kumo %s: %s property updater not implemented",
+                          self._name, prop)
             return
         do_update()
 
@@ -190,7 +197,7 @@ class KumoThermostat(ClimateDevice):
     def _update_hvac_action(self):
         """Refresh cached hvac action"""
         standby = self._pykumo.get_standby()
-        if standby == True:
+        if standby:
             result = CURRENT_HVAC_IDLE
         else:
             mode = self._pykumo.get_mode()
@@ -297,7 +304,7 @@ class KumoThermostat(ClimateDevice):
     def _update_battery_percent(self):
         """Refresh the cached battery percentage."""
         percent = self._pykumo.get_sensor_battery()
-        return percent
+        self._battery_percent = percent
 
     @property
     def should_poll(self):
@@ -306,8 +313,8 @@ class KumoThermostat(ClimateDevice):
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
-        _LOGGER.debug("Kumo %s set temp: %s", self._name, 
-                pprint.pformat(kwargs))
+        _LOGGER.debug("Kumo %s set temp: %s", self._name,
+                      pprint.pformat(kwargs))
         target = {}
         if 'target_temp_high' in kwargs:
             target['cool'] = kwargs['target_temp_high']
