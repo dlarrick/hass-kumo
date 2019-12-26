@@ -1,7 +1,11 @@
-# Home Assistant module interfacing with KumoJS
-Home Assistant control of Mitsubishi mini-split units
+# Kumo
 
-- For US (North American) market mini-splits with KumoCloud WiFi interface
+[![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/dlarrick/hass-kumo)
+
+Kumo is a Home Assistant custom_component for control of Mitsubishi mini-split units.
+
+- For US (North American) market mini-splits with KumoCloud WiFi interface (e.g. PAC-USWHS002-WF-2)
 - Implements standard Home Assistant climate entities
 - Supports Mode (heat/cool etc.), setpoint, fan speed, and vane swing setting
 - Native Python version ("kumo" platform) utilizes [pykumo](https://github.com/dlarrick/pykumo) Python library
@@ -15,7 +19,8 @@ Home Assistant control of Mitsubishi mini-split units
   - This version will never be accepted into Home Assistant because it does not meet the architectural guidelines
 
 ## Installation
-- Put the `kumo` directory from here in `custom_components/kumo` within your configuration directory.
+- You may install Kumo as a HACS Custom Component (note: currently untested; please report success/failure).
+- Or, put the `kumo` directory from here in `custom_components/kumo` within your configuration directory. Be sure to monitor the thread in the HA commumity forums and/or this GitHub repo, since this component is still undergoing development.
 - Add the following lines to your configuration.yaml:
 ```
 kumo:
