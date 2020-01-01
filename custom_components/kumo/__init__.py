@@ -10,7 +10,7 @@ from homeassistant.helpers.discovery import async_load_platform
 
 _LOGGER = logging.getLogger(__name__)
 
-REQUIREMENTS = ['pykumo==0.1.2']
+REQUIREMENTS = ['pykumo==0.1.3']
 DOMAIN = "kumo"
 KUMO_DATA = "kumo_data"
 KUMO_CONFIG_CACHE = "kumo_cache.json"
