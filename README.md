@@ -1,7 +1,7 @@
 # Kumo
 
 [![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/dlarrick/hass-kumo)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
 Kumo is a Home Assistant custom_component for control of Mitsubishi mini-split units.
 
