@@ -1,7 +1,7 @@
 # Kumo
 
 [![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo)
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
 Kumo is a Home Assistant custom_component for control of Mitsubishi mini-split units.
 
@@ -12,14 +12,10 @@ Kumo is a Home Assistant custom_component for control of Mitsubishi mini-split u
   - Design & implementation done to hopefully be accepted into Home Assistant natively, eventually
   - Fully local control except for initial setup (see `prefer_cache` below)
 - Based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example
-- Legacy version ("kumojs" platform) is deprecated
-  - interfaces with [KumoJS](https://github.com/sushilks/kumojs) Node.js module, which actually communicates with the KumoCloud adapter.
-  - You should have KumoJS running as a server on a locally-accessible machine.
-  - Note: KumoJS works fine under Node.js on Raspbian Buster
-  - This version will never be accepted into Home Assistant because it does not meet the architectural guidelines
+- Many thanks to the [KumoJS](https://github.com/sushilks/kumojs) Node.js module author, who did the hard work of reverse-engineering how to access the WiFi interface locally
 
 ## Installation
-- You may install Kumo as a HACS Custom Component (note: currently untested; please report success/failure).
+- You may install Kumo as a HACS Custom Component. Under HACS settings, add custom repository https://github.com/dlarrick/hass-kumo as an Integration.
 - Or, put the `kumo` directory from here in `custom_components/kumo` within your configuration directory. Be sure to monitor the thread in the HA commumity forums and/or this GitHub repo, since this component is still undergoing development.
 - Add the following lines to your configuration.yaml:
 ```
