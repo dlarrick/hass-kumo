@@ -72,6 +72,9 @@ async def async_setup(hass, config):
             account.get_raw_json())
         _LOGGER.info("Loaded config from KumoCloud server")
     else:
+        if not prefer_cache:
+            cached_json = await hass.async_add_executor_job(
+                load_json, hass.config.path(KUMO_CONFIG_CACHE))
         if cached_json:
             account = pykumo.KumoCloudAccount(
                 username, password, kumo_dict=cached_json)
