@@ -13,7 +13,7 @@ from homeassistant.components.climate.const import(
     HVAC_MODE_DRY, HVAC_MODE_FAN_ONLY, ATTR_HVAC_MODE, CURRENT_HVAC_IDLE,
     CURRENT_HVAC_COOL, CURRENT_HVAC_HEAT, CURRENT_HVAC_DRY, CURRENT_HVAC_OFF,
     SUPPORT_TARGET_TEMPERATURE_RANGE)
-from homeassistant.const import (TEMP_CELSIUS)
+from homeassistant.const import (TEMP_CELSIUS, ATTR_BATTERY_LEVEL)
 
 from . import KUMO_DATA
 
@@ -305,6 +305,15 @@ class KumoThermostat(ClimateDevice):
         """Refresh the cached battery percentage."""
         percent = self._pykumo.get_sensor_battery()
         self._battery_percent = percent
+
+    @property
+    def device_state_attributes(self):
+        """Return the state attributes of the device."""
+        attr = {}
+        if self._battery_percent is not None:
+            attr[ATTR_BATTERY_LEVEL] = self._battery_percent
+
+        return attr
 
     @property
     def should_poll(self):

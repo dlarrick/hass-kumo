@@ -10,7 +10,7 @@ from homeassistant.helpers.discovery import async_load_platform
 
 _LOGGER = logging.getLogger(__name__)
 
-REQUIREMENTS = ['pykumo==0.1.3']
+REQUIREMENTS = ['pykumo==0.1.4']
 DOMAIN = "kumo"
 KUMO_DATA = "kumo_data"
 KUMO_CONFIG_CACHE = "kumo_cache.json"
@@ -62,28 +62,50 @@ async def async_setup(hass, config):
     # Read config from either remote KumoCloud server or
     # cached JSON.
     cached_json = {}
+    success = False
     if prefer_cache:
+        # Try to load from cache
         cached_json = await hass.async_add_executor_job(
-            load_json, hass.config.path(KUMO_CONFIG_CACHE))
-    account = pykumo.KumoCloudAccount(username, password)
-    if not cached_json and account.try_setup():
-        await hass.async_add_executor_job(
-            save_json, hass.config.path(KUMO_CONFIG_CACHE),
-            account.get_raw_json())
-        _LOGGER.info("Loaded config from KumoCloud server")
+            load_json, hass.config.path(KUMO_CONFIG_CACHE)) or {"fetched": False}
+        account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_json)
     else:
-        if not prefer_cache:
-            cached_json = await hass.async_add_executor_job(
-                load_json, hass.config.path(KUMO_CONFIG_CACHE))
-        if cached_json:
-            account = pykumo.KumoCloudAccount(
-                username, password, kumo_dict=cached_json)
+        # Try to load from server
+        account = pykumo.KumoCloudAccount(username, password)
+    if account.try_setup():
+        if prefer_cache:
             _LOGGER.info("Loaded config from local cache")
+            success = True
         else:
-            _LOGGER.warning("Could not load KumoCloud cache")
+            await hass.async_add_executor_job(
+                save_json, hass.config.path(KUMO_CONFIG_CACHE),
+                account.get_raw_json())
+            _LOGGER.info("Loaded config from KumoCloud server")
+            success = True
+    else:
+        # Fall back
+        if prefer_cache:
+            # Try to load from server
+            account = pykumo.KumoCloudAccount(username, password)
+        else:
+            # Try to load from cache
+            cached_json = await hass.async_add_executor_job(
+                load_json, hass.config.path(KUMO_CONFIG_CACHE)) or {"fetched": False}
+            account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_json)
+        if account.try_setup():
+            if prefer_cache:
+                await hass.async_add_executor_job(
+                    save_json, hass.config.path(KUMO_CONFIG_CACHE),
+                    account.get_raw_json())
+                _LOGGER.info("Loaded config from KumoCloud server as fallback")
+                success = True
+            else:
+                _LOGGER.info("Loaded config from local cache as fallback")
+                success = True
 
-    hass.data[KUMO_DATA] = KumoData(account)
+    if success:
+        hass.data[KUMO_DATA] = KumoData(account)
+        setup_kumo(hass, config)
+        return True
 
-    setup_kumo(hass, config)
-
-    return True
+    _LOGGER.warning("Could not load config from KumoCloud server or cache")
+    return False
