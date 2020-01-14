@@ -14,8 +14,7 @@ from homeassistant.components.climate.const import(
     CURRENT_HVAC_COOL, CURRENT_HVAC_HEAT, CURRENT_HVAC_DRY, CURRENT_HVAC_OFF,
     SUPPORT_TARGET_TEMPERATURE_RANGE)
 from homeassistant.const import (TEMP_CELSIUS, ATTR_BATTERY_LEVEL)
-
-from . import KUMO_DATA
+from . import (KUMO_DATA, CONF_CONNECT_TIMEOUT, CONF_RESPONSE_TIMEOUT)
 
 _LOGGER = logging.getLogger(__name__)
 __PLATFORM_IS_SET_UP = False
@@ -23,6 +22,9 @@ __PLATFORM_IS_SET_UP = False
 CONF_NAME = 'name'
 CONF_ADDRESS = 'address'
 CONF_CONFIG = 'config'
+
+ATTR_FILTER_DIRTY = "filter_dirty"
+ATTR_DEFROST = "defrost"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
@@ -75,20 +77,26 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
         credentials = data.get_account().get_credentials(unit)
-        devices.append(KumoThermostat(name, address, credentials))
+        connect_timeout = data.get_domain_config().get(
+            CONF_CONNECT_TIMEOUT, None)
+        response_timeout = data.get_domain_config().get(
+            CONF_RESPONSE_TIMEOUT, None)
+        timeouts = (connect_timeout, response_timeout)
+        devices.append(KumoThermostat(name, address, credentials, timeouts))
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
 class KumoThermostat(ClimateDevice):
     """Representation of a Kumo Thermostat device."""
+    # pylint: disable=C0415, R0902, R0904
 
     _update_properties = ['current_humidity', 'hvac_mode',
                           'hvac_action', 'fan_mode', 'swing_mode',
                           'current_temperature', 'target_temperature',
                           'target_temperature_high', 'target_temperature_low',
-                          'battery_percent']
+                          'battery_percent', 'filter_dirty', 'defrost']
 
-    def __init__(self, name, address, config_js):
+    def __init__(self, name, address, config_js, timeouts):
         """Initialize the thermostat."""
         import pykumo
 
@@ -103,7 +111,9 @@ class KumoThermostat(ClimateDevice):
         self._swing_mode = None
         self._current_temperature = None
         self._battery_percent = None
-        self._pykumo = pykumo.PyKumo(name, address, config_js)
+        self._filter_dirty = None
+        self._defrost = None
+        self._pykumo = pykumo.PyKumo(name, address, config_js, timeouts=timeouts)
         self._fan_modes = self._pykumo.get_fan_speeds()
         self._swing_modes = self._pykumo.get_vane_directions()
         self._hvac_modes = [HVAC_MODE_OFF, HVAC_MODE_COOL]
@@ -307,11 +317,35 @@ class KumoThermostat(ClimateDevice):
         self._battery_percent = percent
 
     @property
+    def filter_dirty(self):
+        """ Return whether filter is dirty"""
+        return self._filter_dirty
+
+    def _update_filter_dirty(self):
+        """Refresh the cached filter_dirty attribute."""
+        dirty = self._pykumo.get_filter_dirty()
+        self._filter_dirty = dirty
+
+    @property
+    def defrost(self):
+        """ Return whether in defrost mode"""
+        return self._defrost
+
+    def _update_defrost(self):
+        """Refresh the cached defrost attribute."""
+        defrost = self._pykumo.get_defrost()
+        self._defrost = defrost
+
+    @property
     def device_state_attributes(self):
         """Return the state attributes of the device."""
         attr = {}
         if self._battery_percent is not None:
             attr[ATTR_BATTERY_LEVEL] = self._battery_percent
+        if self._filter_dirty is not None:
+            attr[ATTR_FILTER_DIRTY] = self._filter_dirty
+        if self._defrost is not None:
+            attr[ATTR_DEFROST] = self._defrost
 
         return attr
 
