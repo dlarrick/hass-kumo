@@ -23,13 +23,24 @@ kumo:
   username: !secret kumo_username
   password: !secret kumo_password
   prefer_cache: [True|False] (optional)
+  connect_timeout: [float] (optional, in seconds, default 0.5)
+  response_timeout: [float] (optional, in seconds, defaualt 8)
 ```
 - add those secrets to your secrets.yaml as usual
 - `prefer_cache`, if present, controls whether to contact the KumoCloud servers on startup or prefer locally cached info on how to communicate with the indoor units. Default is False.
+- `connect_timeout` and `response_timeout`, if present, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall HA responsivness if you anticipate your units being offline.
+
+## Sensors
+
+Some useful information from indoor units is published as attributes on the climate entity. You can convert these attributes to sensors using [templates](https://community.home-assistant.io/t/using-attributes-in-lovelace/72672). Notable information available this way:
+- current temperature
+- humidity (if your unit has a remote sensor)
+- battery level of remote sensor (if any)
+- filter dirty (I've never seen this; I suspect it has to be pretty much clogged)
+- defrost mode indication
 
 ## TODO
 - Debugging for different types of indoor units
-- Provide some sensors (current temp, filterDirty, etc.)
 - Explore if other local APIs are available to provide additional useful information (whether unit is calling, etc.)
 - Code cleanup. Code reviews welcome!
 - Proper documentation
