@@ -63,6 +63,8 @@ KUMO_STATE_TO_HA_ACTION = {
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats."""
+    # pylint: disable=C0415
+    import pykumo
 
     # Run once
     global __PLATFORM_IS_SET_UP
@@ -81,8 +83,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             CONF_CONNECT_TIMEOUT, None)
         response_timeout = data.get_domain_config().get(
             CONF_RESPONSE_TIMEOUT, None)
-        timeouts = (connect_timeout, response_timeout)
-        devices.append(KumoThermostat(name, address, credentials, timeouts))
+        kumo_api = await hass.async_add_executor_job(
+            pykumo.PyKumo, name, address, credentials,
+            (connect_timeout, response_timeout))
+        devices.append(KumoThermostat(kumo_api))
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
@@ -96,11 +100,11 @@ class KumoThermostat(ClimateDevice):
                           'target_temperature_high', 'target_temperature_low',
                           'battery_percent', 'filter_dirty', 'defrost']
 
-    def __init__(self, name, address, config_js, timeouts):
+    def __init__(self, kumo_api):
         """Initialize the thermostat."""
         import pykumo
 
-        self._name = name
+        self._name = kumo_api.get_name()
         self._target_temperature = None
         self._target_temperature_low = None
         self._target_temperature_high = None
@@ -113,7 +117,7 @@ class KumoThermostat(ClimateDevice):
         self._battery_percent = None
         self._filter_dirty = None
         self._defrost = None
-        self._pykumo = pykumo.PyKumo(name, address, config_js, timeouts=timeouts)
+        self._pykumo = kumo_api
         self._fan_modes = self._pykumo.get_fan_speeds()
         self._swing_modes = self._pykumo.get_vane_directions()
         self._hvac_modes = [HVAC_MODE_OFF, HVAC_MODE_COOL]
