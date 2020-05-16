@@ -175,7 +175,7 @@ class KumoThermostat(ClimateEntity):
         self._available = True
 
     def update(self):
-        """Call HA to trigger a refresh of cached state."""
+        """Call from HA to trigger a refresh of cached state."""
         for prop in KumoThermostat._update_properties:
             self._update_property(prop)
 
@@ -253,7 +253,7 @@ class KumoThermostat(ClimateEntity):
 
     @property
     def hvac_modes(self):
-        """Return list of available operation modes."""
+        """Return the list of available operation modes."""
         return self._hvac_modes
 
     @property
