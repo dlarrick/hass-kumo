@@ -130,7 +130,6 @@ class KumoThermostat(ClimateDevice):
 
     def __init__(self, kumo_api):
         """Initialize the thermostat."""
-        #        import pykumo
 
         self._name = kumo_api.get_name()
         self._target_temperature = None
@@ -180,7 +179,7 @@ class KumoThermostat(ClimateDevice):
             self._update_property(prop)
 
     def _update_property(self, prop):
-        """Call refresh the value of a property -- may block on I/O."""
+        """Call to refresh the value of a property -- may block on I/O."""
         try:
             do_update = getattr(self, "_update_%s" % prop)
         except AttributeError:
