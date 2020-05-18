@@ -11,11 +11,11 @@
         "step": {
             "user": {
                 "data": {
-                    "password": "[password]",
-                    "username": "[username]",
-                    "prefer_cache": "[prefer cache]",
-                    "connect_timeout": "[connect timeout]",
-                    "response_timeout": "[response timeout]"
+                    "password": "KumoCloud Password",
+                    "username": "KumoCloud Username",
+                    "prefer_cache": "Prefer Cache",
+                    "connect_timeout": "Connect Timeout",
+                    "response_timeout": "Response Timeout"
                 }
             }
         }
