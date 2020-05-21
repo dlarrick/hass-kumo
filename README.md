@@ -28,7 +28,7 @@ kumo:
   password: !secret kumo_password
   prefer_cache: [true|false] (optional)
   connect_timeout: [float] (optional, in seconds, default 0.5)
-  response_timeout: [float] (optional, in seconds, defaualt 8)
+  response_timeout: [float] (optional, in seconds, default 8.0)
 ```
 
 Add the referenced secrets to your secrets.yaml.
