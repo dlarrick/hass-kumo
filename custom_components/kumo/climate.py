@@ -50,33 +50,42 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     }
 )
 
+KUMO_STATE_AUTO = "auto"
+KUMO_STATE_AUTO_COOL = "autoCool"
+KUMO_STATE_AUTO_HEAT = "autoHeat"
+KUMO_STATE_COOL = "cool"
+KUMO_STATE_HEAT = "heat"
+KUMO_STATE_DRY = "dry"
+KUMO_STATE_VENT = "vent"
+KUMO_STATE_OFF = "off"
+
 HA_STATE_TO_KUMO = {
-    HVAC_MODE_HEAT_COOL: "auto",
-    HVAC_MODE_COOL: "cool",
-    HVAC_MODE_HEAT: "heat",
-    HVAC_MODE_DRY: "dry",
-    HVAC_MODE_FAN_ONLY: "vent",
-    HVAC_MODE_OFF: "off",
+    HVAC_MODE_HEAT_COOL: KUMO_STATE_AUTO,
+    HVAC_MODE_COOL: KUMO_STATE_COOL,
+    HVAC_MODE_HEAT: KUMO_STATE_HEAT,
+    HVAC_MODE_DRY: KUMO_STATE_DRY,
+    HVAC_MODE_FAN_ONLY: KUMO_STATE_VENT,
+    HVAC_MODE_OFF: KUMO_STATE_OFF,
 }
 KUMO_STATE_TO_HA = {
-    "auto": HVAC_MODE_HEAT_COOL,
-    "autoCool": HVAC_MODE_HEAT_COOL,
-    "autoHeat": HVAC_MODE_HEAT_COOL,
-    "cool": HVAC_MODE_COOL,
-    "heat": HVAC_MODE_HEAT,
-    "dry": HVAC_MODE_DRY,
-    "vent": HVAC_MODE_FAN_ONLY,
-    "off": HVAC_MODE_OFF,
+    KUMO_STATE_AUTO: HVAC_MODE_HEAT_COOL,
+    KUMO_STATE_AUTO_COOL: HVAC_MODE_HEAT_COOL,
+    KUMO_STATE_AUTO_HEAT: HVAC_MODE_HEAT_COOL,
+    KUMO_STATE_COOL: HVAC_MODE_COOL,
+    KUMO_STATE_HEAT: HVAC_MODE_HEAT,
+    KUMO_STATE_DRY: HVAC_MODE_DRY,
+    KUMO_STATE_VENT: HVAC_MODE_FAN_ONLY,
+    KUMO_STATE_OFF: HVAC_MODE_OFF,
 }
 KUMO_STATE_TO_HA_ACTION = {
-    "auto": CURRENT_HVAC_IDLE,
-    "autoCool": CURRENT_HVAC_COOL,
-    "autoHeat": CURRENT_HVAC_HEAT,
-    "cool": CURRENT_HVAC_COOL,
-    "heat": CURRENT_HVAC_HEAT,
-    "dry": CURRENT_HVAC_DRY,
-    "vent": CURRENT_HVAC_IDLE,
-    "off": CURRENT_HVAC_OFF,
+    KUMO_STATE_AUTO: CURRENT_HVAC_IDLE,
+    KUMO_STATE_AUTO_COOL: CURRENT_HVAC_COOL,
+    KUMO_STATE_AUTO_HEAT: CURRENT_HVAC_HEAT,
+    KUMO_STATE_COOL: CURRENT_HVAC_COOL,
+    KUMO_STATE_HEAT: CURRENT_HVAC_HEAT,
+    KUMO_STATE_DRY: CURRENT_HVAC_DRY,
+    KUMO_STATE_VENT: CURRENT_HVAC_IDLE,
+    KUMO_STATE_OFF: CURRENT_HVAC_OFF,
 }
 
 
@@ -408,9 +417,9 @@ class KumoThermostat(ClimateEntity):
             mode_to_set = None
 
         if mode_to_set is None:
-            mode_to_set = self.hvac_mode
+            mode_to_set = HA_STATE_TO_KUMO[self.hvac_mode]
 
-        if mode_to_set not in (HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT):
+        if mode_to_set not in (KUMO_STATE_AUTO, KUMO_STATE_COOL, KUMO_STATE_HEAT):
             _LOGGER.warning(
                 "Kumo %s not setting target temperature for mode %s",
                 self._name,
@@ -418,13 +427,15 @@ class KumoThermostat(ClimateEntity):
             )
             return
 
-        if mode_to_set == HVAC_MODE_HEAT:
+        if mode_to_set == KUMO_STATE_HEAT:
             response = self._pykumo.set_heat_setpoint(target["setpoint"])
-        elif mode_to_set == HVAC_MODE_COOL:
+        elif mode_to_set == KUMO_STATE_COOL:
             response = self._pykumo.set_cool_setpoint(target["setpoint"])
         else:
-            response = self._pykumo.set_heat_setpoint(target["heat"])
-            response += " " + self._pykumo.set_cool_setpoint(["cool"])
+            heat_response = self._pykumo.set_heat_setpoint(target["heat"])
+            cool_response = self._pykumo.set_cool_setpoint(target["cool"])
+            response = {"heat" : heat_response, "cool" : cool_response}
+
         _LOGGER.debug("Kumo %s set temp: %s C", self._name, target)
         _LOGGER.info("Kumo %s set temp response: %s", self._name, response)
 
