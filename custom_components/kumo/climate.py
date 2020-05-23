@@ -4,7 +4,11 @@ import pprint
 
 import voluptuous as vol
 
-from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateDevice
+from homeassistant.components.climate import PLATFORM_SCHEMA
+try:
+    from homeassistant.components.climate import ClimateEntity
+except ImportError:
+    from homeassistant.components.climate import ClimateDevice as ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     CURRENT_HVAC_COOL,
@@ -96,19 +100,15 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         credentials = data.get_account().get_credentials(unit)
         connect_timeout = data.get_domain_config().get(CONF_CONNECT_TIMEOUT, None)
         response_timeout = data.get_domain_config().get(CONF_RESPONSE_TIMEOUT, None)
-        kumo_api = await hass.async_add_executor_job(
-            pykumo.PyKumo,
-            name,
-            address,
-            credentials,
-            (connect_timeout, response_timeout),
-        )
+        kumo_api = pykumo.PyKumo(name, address, credentials,
+                                 (connect_timeout, response_timeout))
+        await hass.async_add_executor_job(kumo_api.update_status)
         devices.append(KumoThermostat(kumo_api))
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
 
-class KumoThermostat(ClimateDevice):
+class KumoThermostat(ClimateEntity):
     """Representation of a Kumo Thermostat device."""
 
     # pylint: disable=C0415, R0902, R0904
@@ -187,6 +187,7 @@ class KumoThermostat(ClimateDevice):
                 "Kumo %s: %s property updater not implemented", self._name, prop
             )
             return
+        self._pykumo.update_status()
         do_update()
 
     @property

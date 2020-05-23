@@ -10,7 +10,7 @@ from homeassistant.util.json import load_json, save_json
 
 _LOGGER = logging.getLogger(__name__)
 
-REQUIREMENTS = ["pykumo==0.1.5"]
+REQUIREMENTS = ["pykumo==0.1.6"]
 DOMAIN = "kumo"
 KUMO_DATA = "kumo_data"
 KUMO_CONFIG_CACHE = "kumo_cache.json"

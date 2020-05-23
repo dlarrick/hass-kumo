@@ -27,7 +27,7 @@ kumo:
   username: !secret kumo_username
   password: !secret kumo_password
   prefer_cache: [true|false] (optional)
-  connect_timeout: [float] (optional, in seconds, default 0.5)
+  connect_timeout: [float] (optional, in seconds, default 1.2)
   response_timeout: [float] (optional, in seconds, default 8.0)
 ```
 
