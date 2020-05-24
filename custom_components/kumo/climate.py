@@ -1,6 +1,7 @@
 """HomeAssistant climate component for KumoCloud connected HVAC units."""
 import logging
 import pprint
+from datetime import timedelta
 
 import voluptuous as vol
 
@@ -103,7 +104,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         kumo_api = pykumo.PyKumo(name, address, credentials,
                                  (connect_timeout, response_timeout))
         await hass.async_add_executor_job(kumo_api.update_status)
-        devices.append(KumoThermostat(kumo_api))
+        kumo_thermostat = KumoThermostat(kumo_api)
+        await hass.async_add_executor_job(kumo_thermostat.update)
+        devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
@@ -170,13 +173,14 @@ class KumoThermostat(ClimateEntity):
                     prop,
                     str(err),
                 )
+        self._available = False
 
-        self._available = True
 
     def update(self):
         """Call from HA to trigger a refresh of cached state."""
         for prop in KumoThermostat._update_properties:
             self._update_property(prop)
+        self._available = True
 
     def _update_property(self, prop):
         """Call to refresh the value of a property -- may block on I/O."""
@@ -426,7 +430,7 @@ class KumoThermostat(ClimateEntity):
             response = self._pykumo.set_heat_setpoint(target["heat"])
             response += " " + self._pykumo.set_cool_setpoint(["cool"])
         _LOGGER.debug("Kumo %s set temp: %s C", self._name, target)
-        _LOGGER.info("Kumo %s set temp response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set temp response: %s", self._name, response)
 
     def set_hvac_mode(self, hvac_mode):
         """Set new target operation mode."""
@@ -436,14 +440,14 @@ class KumoThermostat(ClimateEntity):
             mode = "off"
 
         response = self._pykumo.set_mode(mode)
-        _LOGGER.info("Kumo %s set mode response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set mode %s response: %s", self._name, hvac_mode, response)
 
     def set_swing_mode(self, swing_mode):
         """Set new vane swing mode."""
         response = self._pykumo.set_vane_direction(swing_mode)
-        _LOGGER.info("Kumo %s set swing mode response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set swing mode response: %s", self._name, response)
 
     def set_fan_mode(self, fan_mode):
         """Set new fan speed mode."""
         response = self._pykumo.set_fan_speed(fan_mode)
-        _LOGGER.info("Kumo %s set fan speed response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set fan speed response: %s", self._name, response)

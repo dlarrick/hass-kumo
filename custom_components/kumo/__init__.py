@@ -10,7 +10,7 @@ from homeassistant.util.json import load_json, save_json
 
 _LOGGER = logging.getLogger(__name__)
 
-REQUIREMENTS = ["pykumo==0.1.6"]
+REQUIREMENTS = ["pykumo==0.1.7"]
 DOMAIN = "kumo"
 KUMO_DATA = "kumo_data"
 KUMO_CONFIG_CACHE = "kumo_cache.json"
@@ -83,7 +83,8 @@ async def async_setup(hass, config):
     else:
         # Try to load from server
         account = pykumo.KumoCloudAccount(username, password)
-    if account.try_setup():
+    setup_success = await hass.async_add_executor_job(account.try_setup)
+    if setup_success:
         if prefer_cache:
             _LOGGER.info("Loaded config from local cache")
             success = True
@@ -104,7 +105,8 @@ async def async_setup(hass, config):
                 load_json, hass.config.path(KUMO_CONFIG_CACHE)
             ) or {"fetched": False}
             account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_json)
-        if account.try_setup():
+        setup_success = await hass.async_add_executor_job(account.try_setup)
+        if setup_success:
             if prefer_cache:
                 await hass.async_add_executor_job(
                     save_json,
