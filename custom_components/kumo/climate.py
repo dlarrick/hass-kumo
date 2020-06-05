@@ -3,8 +3,9 @@ import logging
 import pprint
 
 import voluptuous as vol
-
-from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
+import pykumo
+from pykumo import PyKumo, KumoCloudAccount
+from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateDevice
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     CURRENT_HVAC_COOL,
@@ -25,7 +26,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS
 import homeassistant.helpers.config_validation as cv
-
+from .const import DOMAIN
 from . import CONF_CONNECT_TIMEOUT, CONF_RESPONSE_TIMEOUT, KUMO_DATA
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,6 +77,30 @@ KUMO_STATE_TO_HA_ACTION = {
 }
 
 
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the ecobee thermostat."""
+    import pykumo
+
+    data = hass.data[DOMAIN]
+    devices = []
+    units = data.get_account().get_indoor_units()
+    for unit in units:
+        name = data.get_account().get_name(unit)
+        address = data.get_account().get_address(unit)
+        credentials = data.get_account().get_credentials(unit)
+        connect_timeout = data.get_domain_config().get(CONF_CONNECT_TIMEOUT, None)
+        response_timeout = data.get_domain_config().get(CONF_RESPONSE_TIMEOUT, None)
+        kumo_api = pykumo.PyKumo(
+            name, address, credentials, (connect_timeout, response_timeout)
+        )
+        await hass.async_add_executor_job(kumo_api._update_status)
+        kumo_thermostat = KumoThermostat(kumo_api)
+        await hass.async_add_executor_job(kumo_thermostat.update)
+        devices.append(kumo_thermostat)
+        _LOGGER.debug("Kumo adding entity: %s", name)
+    async_add_entities(devices, True)
+
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats."""
     # pylint: disable=C0415
@@ -108,7 +133,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     async_add_entities(devices)
 
 
-class KumoThermostat(ClimateEntity):
+class KumoThermostat(ClimateDevice):
     """Representation of a Kumo Thermostat device."""
 
     # pylint: disable=C0415, R0902, R0904

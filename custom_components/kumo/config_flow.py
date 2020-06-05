@@ -6,7 +6,7 @@ from pykumo import KumoCloudAccount
 from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.util.json import load_json, save_json
-from .const import (
+from config.custom_components.kumo.const import (
     DOMAIN,
     KUMO_DATA,
     KUMO_CONFIG_CACHE,
@@ -23,7 +23,7 @@ DATA_SCHEMA = vol.Schema(
     {
         vol.Required("username"): str,
         vol.Required("password"): str,
-        vol.Optional("prefer_cache", default=True): bool,
+        vol.Optional("prefer_cache", default=False): bool,
         vol.Optional("connect_timeout", default=10): int,
         vol.Optional("response_timeout", default=10): int,
     }
