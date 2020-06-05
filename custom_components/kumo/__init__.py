@@ -3,7 +3,7 @@ import logging
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import voluptuous as vol
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from config.custom_components.kumo.const import (
+from .const import (
     DOMAIN,
     KUMO_DATA,
     KUMO_CONFIG_CACHE,
@@ -68,22 +68,13 @@ def setup_kumo(hass, config):
 
 async def async_setup(hass, config):
     """Set up the Kumo Cloud devices. Will create climate and sensor components to support devices listed on the provided Kumo Cloud account."""
-    #    conf = config.get(DOMAIN)
-    #    hass.data.setdefault(DOMAIN, {})
     if DOMAIN not in config:
         return True
     # pylint: disable=C0415
     import pykumo
-
-    # async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
-    #    session = async_get_clientsession(hass, entry.data)
-    # username = entry.data[username]
     username = config[DOMAIN].get(CONF_USERNAME)
-    # password = entry.data[password]
     password = config[DOMAIN].get(CONF_PASSWORD)
-    # prefer_cache = entry.data[prefer_cache]
     prefer_cache = config[DOMAIN].get(CONF_PREFER_CACHE)
-
     # Read config from either remote KumoCloud server or
     # cached JSON.
     cached_json = {}

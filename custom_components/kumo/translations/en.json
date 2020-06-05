@@ -11,9 +11,9 @@
     "step": {
       "user": {
         "data": {
-          "username": "[KumoCloud Username-Email Address]",
+          "username": "[KumoCloud Username (Email Address)]",
           "password": "[KumoCloud Password]",
-          "prefer_cache": "[Prefer Locally Cached devices]",
+          "prefer_cache": "[Prefer Local Cache]",
           "connect_timeout": "[Connection Timout]",
           "response_timeout": "[Response Timeout]"
         }
