@@ -1,11 +1,16 @@
 """HomeAssistant climate component for KumoCloud connected HVAC units."""
 import logging
 import pprint
-
+from datetime import timedelta
 import voluptuous as vol
 import pykumo
 from pykumo import PyKumo, KumoCloudAccount
-from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateDevice
+from homeassistant.components.climate import PLATFORM_SCHEMA
+
+try:
+    from homeassistant.components.climate import ClimateEntity
+except ImportError:
+    from homeassistant.components.climate import ClimateDevice as ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     CURRENT_HVAC_COOL,
@@ -47,43 +52,52 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     }
 )
 
+KUMO_STATE_AUTO = "auto"
+KUMO_STATE_AUTO_COOL = "autoCool"
+KUMO_STATE_AUTO_HEAT = "autoHeat"
+KUMO_STATE_COOL = "cool"
+KUMO_STATE_HEAT = "heat"
+KUMO_STATE_DRY = "dry"
+KUMO_STATE_VENT = "vent"
+KUMO_STATE_OFF = "off"
+
 HA_STATE_TO_KUMO = {
-    HVAC_MODE_HEAT_COOL: "auto",
-    HVAC_MODE_COOL: "cool",
-    HVAC_MODE_HEAT: "heat",
-    HVAC_MODE_DRY: "dry",
-    HVAC_MODE_FAN_ONLY: "vent",
-    HVAC_MODE_OFF: "off",
+    HVAC_MODE_HEAT_COOL: KUMO_STATE_AUTO,
+    HVAC_MODE_COOL: KUMO_STATE_COOL,
+    HVAC_MODE_HEAT: KUMO_STATE_HEAT,
+    HVAC_MODE_DRY: KUMO_STATE_DRY,
+    HVAC_MODE_FAN_ONLY: KUMO_STATE_VENT,
+    HVAC_MODE_OFF: KUMO_STATE_OFF,
 }
 KUMO_STATE_TO_HA = {
-    "auto": HVAC_MODE_HEAT_COOL,
-    "autoCool": HVAC_MODE_HEAT_COOL,
-    "autoHeat": HVAC_MODE_HEAT_COOL,
-    "cool": HVAC_MODE_COOL,
-    "heat": HVAC_MODE_HEAT,
-    "dry": HVAC_MODE_DRY,
-    "vent": HVAC_MODE_FAN_ONLY,
-    "off": HVAC_MODE_OFF,
+    KUMO_STATE_AUTO: HVAC_MODE_HEAT_COOL,
+    KUMO_STATE_AUTO_COOL: HVAC_MODE_HEAT_COOL,
+    KUMO_STATE_AUTO_HEAT: HVAC_MODE_HEAT_COOL,
+    KUMO_STATE_COOL: HVAC_MODE_COOL,
+    KUMO_STATE_HEAT: HVAC_MODE_HEAT,
+    KUMO_STATE_DRY: HVAC_MODE_DRY,
+    KUMO_STATE_VENT: HVAC_MODE_FAN_ONLY,
+    KUMO_STATE_OFF: HVAC_MODE_OFF,
 }
 KUMO_STATE_TO_HA_ACTION = {
-    "auto": CURRENT_HVAC_IDLE,
-    "autoCool": CURRENT_HVAC_COOL,
-    "autoHeat": CURRENT_HVAC_HEAT,
-    "cool": CURRENT_HVAC_COOL,
-    "heat": CURRENT_HVAC_HEAT,
-    "dry": CURRENT_HVAC_DRY,
-    "vent": CURRENT_HVAC_IDLE,
-    "off": CURRENT_HVAC_OFF,
+    KUMO_STATE_AUTO: CURRENT_HVAC_IDLE,
+    KUMO_STATE_AUTO_COOL: CURRENT_HVAC_COOL,
+    KUMO_STATE_AUTO_HEAT: CURRENT_HVAC_HEAT,
+    KUMO_STATE_COOL: CURRENT_HVAC_COOL,
+    KUMO_STATE_HEAT: CURRENT_HVAC_HEAT,
+    KUMO_STATE_DRY: CURRENT_HVAC_DRY,
+    KUMO_STATE_VENT: CURRENT_HVAC_IDLE,
+    KUMO_STATE_OFF: CURRENT_HVAC_OFF,
 }
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the ecobee thermostat."""
-    import pykumo
+    #    import pykumo
 
     data = hass.data[DOMAIN]
     devices = []
-    units = data.get_account().get_indoor_units()
+    units = await hass.async_add_executor_job(data.get_account().get_indoor_units)
     for unit in units:
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
@@ -93,7 +107,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         kumo_api = pykumo.PyKumo(
             name, address, credentials, (connect_timeout, response_timeout)
         )
-        await hass.async_add_executor_job(kumo_api._update_status)
+        await hass.async_add_executor_job(kumo_api.update_status)
         kumo_thermostat = KumoThermostat(kumo_api)
         await hass.async_add_executor_job(kumo_thermostat.update)
         devices.append(kumo_thermostat)
@@ -121,19 +135,18 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         credentials = data.get_account().get_credentials(unit)
         connect_timeout = data.get_domain_config().get(CONF_CONNECT_TIMEOUT, None)
         response_timeout = data.get_domain_config().get(CONF_RESPONSE_TIMEOUT, None)
-        kumo_api = await hass.async_add_executor_job(
-            pykumo.PyKumo,
-            name,
-            address,
-            credentials,
-            (connect_timeout, response_timeout),
+        kumo_api = pykumo.PyKumo(
+            name, address, credentials, (connect_timeout, response_timeout)
         )
-        devices.append(KumoThermostat(kumo_api))
+        await hass.async_add_executor_job(kumo_api.update_status)
+        kumo_thermostat = KumoThermostat(kumo_api)
+        await hass.async_add_executor_job(kumo_thermostat.update)
+        devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices)
 
 
-class KumoThermostat(ClimateDevice):
+class KumoThermostat(ClimateEntity):
     """Representation of a Kumo Thermostat device."""
 
     # pylint: disable=C0415, R0902, R0904
@@ -195,13 +208,13 @@ class KumoThermostat(ClimateDevice):
                     prop,
                     str(err),
                 )
-
-        self._available = True
+        self._available = False
 
     def update(self):
         """Call from HA to trigger a refresh of cached state."""
         for prop in KumoThermostat._update_properties:
             self._update_property(prop)
+        self._available = True
 
     def _update_property(self, prop):
         """Call to refresh the value of a property -- may block on I/O."""
@@ -212,6 +225,7 @@ class KumoThermostat(ClimateDevice):
                 "Kumo %s: %s property updater not implemented", self._name, prop
             )
             return
+        self._pykumo.update_status()
         do_update()
 
     @property
@@ -412,6 +426,15 @@ class KumoThermostat(ClimateDevice):
         """Return the polling state."""
         return True
 
+    @property
+    def device_info(self):
+        """Return device information for this Kumo Thermostat"""
+        return {
+            "identifiers": {[(DOMAIN, self.name)]},
+            "name": self.name,
+            "manufacturer": "Mistubishi",
+        }
+
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
         _LOGGER.debug("Kumo %s set temp: %s", self._name, pprint.pformat(kwargs))
@@ -432,9 +455,9 @@ class KumoThermostat(ClimateDevice):
             mode_to_set = None
 
         if mode_to_set is None:
-            mode_to_set = self.hvac_mode
+            mode_to_set = HA_STATE_TO_KUMO[self.hvac_mode]
 
-        if mode_to_set not in (HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT):
+        if mode_to_set not in (KUMO_STATE_AUTO, KUMO_STATE_COOL, KUMO_STATE_HEAT):
             _LOGGER.warning(
                 "Kumo %s not setting target temperature for mode %s",
                 self._name,
@@ -442,15 +465,17 @@ class KumoThermostat(ClimateDevice):
             )
             return
 
-        if mode_to_set == HVAC_MODE_HEAT:
+        if mode_to_set == KUMO_STATE_HEAT:
             response = self._pykumo.set_heat_setpoint(target["setpoint"])
-        elif mode_to_set == HVAC_MODE_COOL:
+        elif mode_to_set == KUMO_STATE_COOL:
             response = self._pykumo.set_cool_setpoint(target["setpoint"])
         else:
-            response = self._pykumo.set_heat_setpoint(target["heat"])
-            response += " " + self._pykumo.set_cool_setpoint(["cool"])
+            heat_response = self._pykumo.set_heat_setpoint(target["heat"])
+            cool_response = self._pykumo.set_cool_setpoint(target["cool"])
+            response = {"heat": heat_response, "cool": cool_response}
+
         _LOGGER.debug("Kumo %s set temp: %s C", self._name, target)
-        _LOGGER.info("Kumo %s set temp response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set temp response: %s", self._name, response)
 
     def set_hvac_mode(self, hvac_mode):
         """Set new target operation mode."""
@@ -460,14 +485,16 @@ class KumoThermostat(ClimateDevice):
             mode = "off"
 
         response = self._pykumo.set_mode(mode)
-        _LOGGER.info("Kumo %s set mode response: %s", self._name, response)
+        _LOGGER.debug(
+            "Kumo %s set mode %s response: %s", self._name, hvac_mode, response
+        )
 
     def set_swing_mode(self, swing_mode):
         """Set new vane swing mode."""
         response = self._pykumo.set_vane_direction(swing_mode)
-        _LOGGER.info("Kumo %s set swing mode response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set swing mode response: %s", self._name, response)
 
     def set_fan_mode(self, fan_mode):
         """Set new fan speed mode."""
         response = self._pykumo.set_fan_speed(fan_mode)
-        _LOGGER.info("Kumo %s set fan speed response: %s", self._name, response)
+        _LOGGER.debug("Kumo %s set fan speed response: %s", self._name, response)

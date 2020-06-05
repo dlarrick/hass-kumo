@@ -17,8 +17,12 @@ from homeassistant.util.json import load_json, save_json
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from pykumo import PyKumo, KumoCloudAccount
+import asyncio
 
 _LOGGER = logging.getLogger(__name__)
+
+
+REQUIREMENTS = ["pykumo==0.1.7"]
 
 
 CONFIG_SCHEMA = vol.Schema(
@@ -72,6 +76,7 @@ async def async_setup(hass, config):
         return True
     # pylint: disable=C0415
     import pykumo
+
     username = config[DOMAIN].get(CONF_USERNAME)
     password = config[DOMAIN].get(CONF_PASSWORD)
     prefer_cache = config[DOMAIN].get(CONF_PREFER_CACHE)
@@ -88,7 +93,8 @@ async def async_setup(hass, config):
     else:
         # Try to load from server
         account = pykumo.KumoCloudAccount(username, password)
-    if account.try_setup():
+    setup_success = await hass.async_add_executor_job(account.try_setup)
+    if setup_success:
         if prefer_cache:
             _LOGGER.info("Loaded config from local cache")
             success = True
@@ -109,7 +115,8 @@ async def async_setup(hass, config):
                 load_json, hass.config.path(KUMO_CONFIG_CACHE)
             ) or {"fetched": False}
             account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_json)
-        if account.try_setup():
+        setup_success = await hass.async_add_executor_job(account.try_setup)
+        if setup_success:
             if prefer_cache:
                 await hass.async_add_executor_job(
                     save_json,
@@ -145,3 +152,10 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
         hass.config_entries.async_forward_entry_setup(entry, "climate")
     )
     return True
+
+
+async def async_unload_entry(hass: HomeAssistantType, entry: ConfigEntry):
+    hass.data.pop(DOMAIN)
+    tasks = []
+    tasks.append(hass.config_entries.async_forward_entry_unload(entry, "climate"))
+    return all(await asyncio.gather(*tasks))

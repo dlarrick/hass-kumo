@@ -1,16 +1,10 @@
 {
-  "domain": "kumo",
-  "name": "Kumo",
-  "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/kumo",
-  "requirements": [
-    "pykumo==0.1.5"
-  ],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
-  "codeowners": [
-    "@dlarrick"
-  ]
+    "domain": "kumo",
+    "name": "Kumo",
+    "config_flow": true,
+    "documentation": "https://github.com/dlarrick/hass-kumo",
+    "dependencies": [],
+    "codeowners": [ "@dlarrick" ],
+    "requirements": ["pykumo==0.1.7"],
+    "homeassistant": "0.96.0"
 }
