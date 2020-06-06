@@ -1,7 +1,6 @@
 """HomeAssistant climate component for KumoCloud connected HVAC units."""
 import logging
 import pprint
-from datetime import timedelta
 import pykumo
 import voluptuous as vol
 from .const import DOMAIN
@@ -114,10 +113,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up Kumo thermostats."""
-    # pylint: disable=C0415
-
-    # Run once
+    """Set up Kumo thermostats. Run Once"""
     global __PLATFORM_IS_SET_UP
     if __PLATFORM_IS_SET_UP:
         return
@@ -145,8 +141,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 class KumoThermostat(ClimateEntity):
     """Representation of a Kumo Thermostat device."""
-
-    # pylint: disable=C0415, R0902, R0904
 
     _update_properties = [
         "current_humidity",
