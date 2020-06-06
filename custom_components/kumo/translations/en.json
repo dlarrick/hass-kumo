@@ -1,24 +1,24 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-        },
-        "error": {
-            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-            "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-            "unknown": "[%key:common::config_flow::error::unknown%]"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "password": "KumoCloud Password",
-                    "username": "KumoCloud Username",
-                    "prefer_cache": "Prefer Cache",
-                    "connect_timeout": "Connect Timeout",
-                    "response_timeout": "Response Timeout"
-                }
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     },
-    "title": "Kumo"
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[Invalid Credentials, Wrong user or password]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "username": "[KumoCloud Username (Email Address)]",
+          "password": "[KumoCloud Password]",
+          "prefer_cache": "[Prefer Local Cache]",
+          "connect_timeout": "[Connection Timout]",
+          "response_timeout": "[Response Timeout]"
+        }
+      }
+    }
+  },
+  "title": "Kumo"
 }
