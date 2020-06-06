@@ -2,9 +2,9 @@
 import logging
 import pprint
 from datetime import timedelta
-import voluptuous as vol
 import pykumo
-from pykumo import PyKumo, KumoCloudAccount
+import voluptuous as vol
+from .const import DOMAIN
 from homeassistant.components.climate import PLATFORM_SCHEMA
 
 try:
@@ -31,7 +31,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS
 import homeassistant.helpers.config_validation as cv
-from .const import DOMAIN
+
 from . import CONF_CONNECT_TIMEOUT, CONF_RESPONSE_TIMEOUT, KUMO_DATA
 
 _LOGGER = logging.getLogger(__name__)
@@ -92,9 +92,7 @@ KUMO_STATE_TO_HA_ACTION = {
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the ecobee thermostat."""
-    #    import pykumo
-
+    """Set up the Kumo thermostat."""
     data = hass.data[DOMAIN]
     devices = []
     units = await hass.async_add_executor_job(data.get_account().get_indoor_units)
@@ -108,7 +106,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             name, address, credentials, (connect_timeout, response_timeout)
         )
         await hass.async_add_executor_job(kumo_api.update_status)
-        kumo_thermostat = KumoThermostat(kumo_api)
+        kumo_thermostat = KumoThermostat(kumo_api, unit)
         await hass.async_add_executor_job(kumo_thermostat.update)
         devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
@@ -118,7 +116,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats."""
     # pylint: disable=C0415
-    import pykumo
 
     # Run once
     global __PLATFORM_IS_SET_UP
@@ -139,7 +136,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             name, address, credentials, (connect_timeout, response_timeout)
         )
         await hass.async_add_executor_job(kumo_api.update_status)
-        kumo_thermostat = KumoThermostat(kumo_api)
+        kumo_thermostat = KumoThermostat(kumo_api, unit)
         await hass.async_add_executor_job(kumo_thermostat.update)
         devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
@@ -166,10 +163,11 @@ class KumoThermostat(ClimateEntity):
         "defrost",
     ]
 
-    def __init__(self, kumo_api):
+    def __init__(self, kumo_api, unit):
         """Initialize the thermostat."""
 
         self._name = kumo_api.get_name()
+        self._identifier = unit
         self._target_temperature = None
         self._target_temperature_low = None
         self._target_temperature_high = None
@@ -427,10 +425,15 @@ class KumoThermostat(ClimateEntity):
         return True
 
     @property
+    def unique_id(self):
+        """Return unique id"""
+        return self._identifier
+
+    @property
     def device_info(self):
         """Return device information for this Kumo Thermostat"""
         return {
-            "identifiers": {[(DOMAIN, self.name)]},
+            "identifiers": {(DOMAIN, self._identifier)},
             "name": self.name,
             "manufacturer": "Mistubishi",
         }

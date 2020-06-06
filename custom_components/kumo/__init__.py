@@ -1,8 +1,14 @@
 """Support for Mitsubishi KumoCloud devices."""
 import logging
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+import pykumo
+import asyncio
 import voluptuous as vol
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.helpers.typing import ConfigType, HomeAssistantType
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.util.json import load_json, save_json
 from .const import (
     DOMAIN,
     KUMO_DATA,
@@ -11,18 +17,8 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_RESPONSE_TIMEOUT,
 )
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.util.json import load_json, save_json
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.typing import ConfigType, HomeAssistantType
-from pykumo import PyKumo, KumoCloudAccount
-import asyncio
 
 _LOGGER = logging.getLogger(__name__)
-
-
-REQUIREMENTS = ["pykumo==0.1.7"]
 
 
 CONFIG_SCHEMA = vol.Schema(
@@ -75,11 +71,10 @@ async def async_setup(hass, config):
     if DOMAIN not in config:
         return True
     # pylint: disable=C0415
-    import pykumo
-
     username = config[DOMAIN].get(CONF_USERNAME)
     password = config[DOMAIN].get(CONF_PASSWORD)
     prefer_cache = config[DOMAIN].get(CONF_PREFER_CACHE)
+
     # Read config from either remote KumoCloud server or
     # cached JSON.
     cached_json = {}
@@ -133,21 +128,18 @@ async def async_setup(hass, config):
         hass.data[KUMO_DATA] = KumoData(account, config[DOMAIN])
         setup_kumo(hass, config)
         return True
-    # Enable component
+
     _LOGGER.warning("Could not load config from KumoCloud server or cache")
-    return True
+    return False
 
 
 async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
-    import pykumo
-
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     prefer_cache = entry.data.get(CONF_PREFER_CACHE)
     account = pykumo.KumoCloudAccount(username, password)
     data = KumoData(account, entry.data)
     hass.data[DOMAIN] = data
-
     hass.async_create_task(
         hass.config_entries.async_forward_entry_setup(entry, "climate")
     )
