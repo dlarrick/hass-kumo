@@ -1,6 +1,6 @@
 """Config flow for Kumo integration."""
 import logging
-
+from requests.exceptions import ConnectionError
 import voluptuous as vol
 from pykumo import KumoCloudAccount
 from homeassistant import config_entries, core, exceptions
@@ -37,7 +37,10 @@ async def validate_input(hass: core.HomeAssistant, data):
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
     account = KumoCloudAccount(data["username"], data["password"])
-    result = await hass.async_add_executor_job(account.try_setup)
+    try:
+        result = await hass.async_add_executor_job(account.try_setup)
+    except ConnectionError:
+        raise CannotConnect
     if not result:
         raise InvalidAuth
     else:
