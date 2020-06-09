@@ -1,6 +1,7 @@
 {
     "domain": "kumo",
     "name": "Kumo",
+    "config_flow": true,
     "documentation": "https://github.com/dlarrick/hass-kumo",
     "dependencies": [],
     "codeowners": [ "@dlarrick" ],
