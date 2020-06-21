@@ -4,19 +4,10 @@ from requests.exceptions import ConnectionError
 import voluptuous as vol
 from pykumo import KumoCloudAccount
 from homeassistant import config_entries, core, exceptions
+from homeassistant.core import callback
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-
-DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required("username"): str,
-        vol.Required("password"): str,
-        vol.Optional("prefer_cache", default=False): bool,
-        vol.Optional("connect_timeout", default=10): int,
-        vol.Optional("response_timeout", default=10): int,
-    }
-)
 
 
 class PlaceholderAccount:
@@ -55,6 +46,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
+        data_schema = {
+            vol.Required("username"): str,
+            vol.Required("password"): str,
+            vol.Optional("prefer_cache"): bool,
+        }
         errors = {}
         if user_input is not None:
             try:
@@ -65,8 +61,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         "username": user_input["username"],
                         "password": user_input["password"],
                         "prefer_cache": user_input["prefer_cache"],
-                        "connect_timeout": user_input["connect_timeout"],
-                        "response_timeout": user_input["response_timeout"],
                     },
                 )
             except CannotConnect:
@@ -78,8 +72,35 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
 
         return self.async_show_form(
-            step_id="user", data_schema=DATA_SCHEMA, errors=errors
+            step_id="user", data_schema=vol.Schema(data_schema), errors=errors
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
+
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle a option flow for Kumo."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Handle options flow."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        data_schema = vol.Schema(
+            {
+                vol.Required("connect_timeout", default=1.2): str,
+                vol.Required("response_timeout", default=8): str,
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=data_schema)
 
 
 class CannotConnect(exceptions.HomeAssistantError):

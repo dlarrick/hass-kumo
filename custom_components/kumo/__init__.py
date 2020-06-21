@@ -40,10 +40,11 @@ CONFIG_SCHEMA = vol.Schema(
 class KumoData:
     """Hold object representing KumoCloud account."""
 
-    def __init__(self, account, domain_config):
+    def __init__(self, account, domain_config, domain_options):
         """Init KumoCloudAccount object."""
         self._account = account
         self._domain_config = domain_config
+        self._domain_options = domain_options
 
     def get_account(self):
         """Retrieve account."""
@@ -52,6 +53,10 @@ class KumoData:
     def get_domain_config(self):
         """Retrieve domain config."""
         return self._domain_config
+
+    def get_domain_options(self):
+        """Retrieve domain config."""
+        return self._domain_options
 
     def get_raw_json(self):
         """Retrieve raw JSON config from account."""
@@ -185,7 +190,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
                 _LOGGER.info("Loaded config from local cache as fallback")
                 success = True
     if success:
-        data = KumoData(account, entry.data)
+        data = KumoData(account, entry.data, entry.options)
         hass.data[DOMAIN] = data
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, "climate")

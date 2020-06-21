@@ -13,7 +13,15 @@
         "data": {
           "username": "[KumoCloud Username (Email Address)]",
           "password": "[KumoCloud Password]",
-          "prefer_cache": "[Prefer Local Cache]",
+          "prefer_cache": "[Prefer Local Cache]"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
           "connect_timeout": "[Connection Timout]",
           "response_timeout": "[Response Timeout]"
         }

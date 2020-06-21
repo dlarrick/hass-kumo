@@ -99,8 +99,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
         credentials = data.get_account().get_credentials(unit)
-        connect_timeout = data.get_domain_config().get(CONF_CONNECT_TIMEOUT, None)
-        response_timeout = data.get_domain_config().get(CONF_RESPONSE_TIMEOUT, None)
+        connect_timeout = float(
+            data.get_domain_options().get(CONF_CONNECT_TIMEOUT, "1.2")
+        )
+        response_timeout = float(
+            data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, "8")
+        )
         kumo_api = pykumo.PyKumo(
             name, address, credentials, (connect_timeout, response_timeout)
         )
@@ -126,8 +130,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
         credentials = data.get_account().get_credentials(unit)
-        connect_timeout = data.get_domain_config().get(CONF_CONNECT_TIMEOUT, None)
-        response_timeout = data.get_domain_config().get(CONF_RESPONSE_TIMEOUT, None)
+        connect_timeout = float(
+            data.get_domain_options().get(CONF_CONNECT_TIMEOUT, None)
+        )
+        response_timeout = float(
+            data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, None)
+        )
         kumo_api = pykumo.PyKumo(
             name, address, credentials, (connect_timeout, response_timeout)
         )
