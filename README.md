@@ -20,7 +20,13 @@ We recommend using the HACS installation method, which makes future updates to K
 
 ## Configuration
 
-Configuration for Kumo is currently YAML only. Add the following configuration to your configuration.yaml:
+Configuration is now possible using the GUI:
+
+Simply go to Configuration->Integrations and add a new integration. Search for "Kumo" and select it.
+The dialog will prompt you for your KumoCloud user(email address) as well as your password. You will have the option to enable the prefer_cache option in this dialog. Once complete the Dialog will promt you to assign a Room for discovered devices.
+You will now have a card for the integration along with an "Options" link. In the Options Dialog you can change the default timeout values. Please note that the new values will not take effect until you restart HomeAssistant.
+
+Configuration for Kumo can also be configured using YAML. Add the following configuration to your configuration.yaml:
 
 ```
 kumo:
