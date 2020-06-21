@@ -1,0 +1,34 @@
+{
+  "title": "Kumo",
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "prefer_cache": "Prefer Cached JSON",
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  }
+},
+"options": {
+  "step": {
+    "init": {
+      "data": {
+        "connect_timeout": "Connect Timeout",
+        "response_timeout": "Response Timeout"
+
+      }
+    }
+  }
+}
+}
