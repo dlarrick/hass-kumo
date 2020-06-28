@@ -77,6 +77,10 @@ async def async_setup(hass, config):
     username = config[DOMAIN].get(CONF_USERNAME)
     password = config[DOMAIN].get(CONF_PASSWORD)
     prefer_cache = config[DOMAIN].get(CONF_PREFER_CACHE)
+    domain_options = {
+        "connect_timeout": config[DOMAIN].get(CONF_CONNECT_TIMEOUT),
+        "response_timeout": config[DOMAIN].get(CONF_RESPONSE_TIMEOUT),
+    }
 
     # Read config from either remote KumoCloud server or
     # cached JSON.
@@ -128,7 +132,7 @@ async def async_setup(hass, config):
                 success = True
 
     if success:
-        hass.data[KUMO_DATA] = KumoData(account, config[DOMAIN])
+        hass.data[KUMO_DATA] = KumoData(account, config[DOMAIN], domain_options)
         setup_kumo(hass, config)
         return True
 
