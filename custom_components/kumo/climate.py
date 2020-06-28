@@ -115,6 +115,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _LOGGER.debug("Kumo adding entity: %s", name)
     async_add_entities(devices, True)
 
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats. Run Once"""
     global __PLATFORM_IS_SET_UP
@@ -129,12 +130,18 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
         credentials = data.get_account().get_credentials(unit)
-        connect_timeout = float(
-            data.get_domain_options().get(CONF_CONNECT_TIMEOUT, None)
-        )
-        response_timeout = float(
-            data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, None)
-        )
+        if data.get_domain_options().get(CONF_CONNECT_TIMEOUT) is None:
+            connect_timeout = 1.2
+        else:
+            connect_timeout = float(
+                data.get_domain_options().get(CONF_CONNECT_TIMEOUT, "1.2")
+            )
+        if data.get_domain_options().get(CONF_RESPONSE_TIMEOUT) is None:
+            response_timeout = 8.0
+        else:
+            response_timeout = float(
+                data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, "8")
+            )
         kumo_api = pykumo.PyKumo(
             name, address, credentials, (connect_timeout, response_timeout)
         )
