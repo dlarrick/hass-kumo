@@ -6,7 +6,7 @@ from pykumo import KumoCloudAccount
 from homeassistant import config_entries, core, exceptions
 from homeassistant.core import callback
 from .const import DOMAIN
-
+DEFAULT_PREFER_CACHE = False
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -49,7 +49,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = {
             vol.Required("username"): str,
             vol.Required("password"): str,
-            vol.Optional("prefer_cache"): bool,
+            vol.Optional("prefer_cache", default=DEFAULT_PREFER_CACHE): bool,
         }
         errors = {}
         if user_input is not None:
