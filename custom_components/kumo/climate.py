@@ -476,10 +476,14 @@ class KumoThermostat(ClimateEntity):
             )
             return
 
+        mode_response = self._pykumo.set_mode(mode_to_set)
+        
         if mode_to_set == KUMO_STATE_HEAT:
-            response = self._pykumo.set_heat_setpoint(target["setpoint"])
+            heat_response = self._pykumo.set_heat_setpoint(target["setpoint"])
+            response = {"heat": heat_response, "mode": mode_response}
         elif mode_to_set == KUMO_STATE_COOL:
-            response = self._pykumo.set_cool_setpoint(target["setpoint"])
+            cool_response = self._pykumo.set_cool_setpoint(target["setpoint"])
+            response = {"cool": cool_response, "mode": mode_response}
         else:
             heat_response = self._pykumo.set_heat_setpoint(target["heat"])
             cool_response = self._pykumo.set_cool_setpoint(target["cool"])
