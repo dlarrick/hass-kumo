@@ -45,6 +45,7 @@ class KumoData:
         self._account = account
         self._domain_config = domain_config
         self._domain_options = domain_options
+        self._setup_tries = 0
 
     def get_account(self):
         """Retrieve account."""

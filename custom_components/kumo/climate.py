@@ -5,6 +5,7 @@ import pykumo
 import voluptuous as vol
 from .const import DOMAIN
 from homeassistant.components.climate import PLATFORM_SCHEMA
+from homeassistant.exceptions import HomeAssistantError, PlatformNotReady
 
 try:
     from homeassistant.components.climate import ClimateEntity
@@ -12,6 +13,8 @@ except ImportError:
     from homeassistant.components.climate import ClimateDevice as ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     CURRENT_HVAC_COOL,
     CURRENT_HVAC_DRY,
     CURRENT_HVAC_HEAT,
@@ -28,7 +31,11 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_TARGET_TEMPERATURE_RANGE,
 )
-from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS
+from homeassistant.const import (
+    ATTR_BATTERY_LEVEL,
+    ATTR_TEMPERATURE,
+    TEMP_CELSIUS
+)
 import homeassistant.helpers.config_validation as cv
 
 from . import CONF_CONNECT_TIMEOUT, CONF_RESPONSE_TIMEOUT, KUMO_DATA
@@ -88,13 +95,19 @@ KUMO_STATE_TO_HA_ACTION = {
     KUMO_STATE_VENT: CURRENT_HVAC_IDLE,
     KUMO_STATE_OFF: CURRENT_HVAC_OFF,
 }
+MAX_SETUP_TRIES = 10
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Kumo thermostat."""
+    """Set up the Kumo thermostats."""
     data = hass.data[DOMAIN]
+    data._setup_tries += 1
+    if data._setup_tries > MAX_SETUP_TRIES:
+        raise HomeAssistantError("Giving up trying to set up Kumo")
+
     devices = []
-    units = await hass.async_add_executor_job(data.get_account().get_indoor_units)
+    units = await hass.async_add_executor_job(
+        data.get_account().get_indoor_units)
     for unit in units:
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
@@ -108,15 +121,23 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         kumo_api = pykumo.PyKumo(
             name, address, credentials, (connect_timeout, response_timeout)
         )
-        await hass.async_add_executor_job(kumo_api.update_status)
+        success = await hass.async_add_executor_job(kumo_api.update_status)
+        if not success:
+            _LOGGER.warning("Kumo %s could not be set up", name)
+            continue
         kumo_thermostat = KumoThermostat(kumo_api, unit)
         await hass.async_add_executor_job(kumo_thermostat.update)
         devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
+    if not devices:
+        _LOGGER.warning("Kumo could not set up any indoor units (try %d of %d)",
+                        data._setup_tries, MAX_SETUP_TRIES)
+        raise PlatformNotReady
     async_add_entities(devices, True)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(
+        hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats. Run Once"""
     global __PLATFORM_IS_SET_UP
     if __PLATFORM_IS_SET_UP:
@@ -124,6 +145,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     __PLATFORM_IS_SET_UP = True
 
     data = hass.data[KUMO_DATA]
+    data._setup_tries += 1
+    if data._setup_tries > MAX_SETUP_TRIES:
+        raise HomeAssistantError("Giving up trying to set up Kumo")
+
     devices = []
     units = data.get_account().get_indoor_units()
     for unit in units:
@@ -145,11 +170,18 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         kumo_api = pykumo.PyKumo(
             name, address, credentials, (connect_timeout, response_timeout)
         )
-        await hass.async_add_executor_job(kumo_api.update_status)
+        success = await hass.async_add_executor_job(kumo_api.update_status)
+        if not success:
+            _LOGGER.warning("Kumo %s could not be set up", name)
+            continue
         kumo_thermostat = KumoThermostat(kumo_api, unit)
         await hass.async_add_executor_job(kumo_thermostat.update)
         devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
+    if not devices:
+        _LOGGER.warning("Kumo could not set up any indoor units (try %d of %d)",
+                        data._setup_tries, MAX_SETUP_TRIES)
+        raise PlatformNotReady        
     async_add_entities(devices)
 
 
@@ -220,7 +252,9 @@ class KumoThermostat(ClimateEntity):
         """Call from HA to trigger a refresh of cached state."""
         for prop in KumoThermostat._update_properties:
             self._update_property(prop)
-        self._available = True
+            if not self.available:
+                # Get out early if it's failing
+                break
 
     def _update_property(self, prop):
         """Call to refresh the value of a property -- may block on I/O."""
@@ -231,7 +265,11 @@ class KumoThermostat(ClimateEntity):
                 "Kumo %s: %s property updater not implemented", self._name, prop
             )
             return
-        self._pykumo.update_status()
+        success = self._pykumo.update_status()
+        if not success:
+            self._available = False
+            return
+        self._available = True
         do_update()
 
     @property
@@ -448,45 +486,55 @@ class KumoThermostat(ClimateEntity):
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
-        _LOGGER.debug("Kumo %s set temp: %s", self._name, pprint.pformat(kwargs))
-        target = {}
-        if "target_temp_high" in kwargs:
-            target["cool"] = kwargs["target_temp_high"]
-        if "target_temp_low" in kwargs:
-            target["heat"] = kwargs["target_temp_low"]
-        if "temperature" in kwargs:
-            target["setpoint"] = kwargs["temperature"]
-        if len(target) == 0:
-            _LOGGER.debug("Kumo %s set temp: no temp in args", self._name)
+        _LOGGER.debug(
+            "Kumo %s set temp: %s, current mode %s",
+            self._name, pprint.pformat(kwargs), self._hvac_mode)
+
+        if not self.available:
+            _LOGGER.warning("Kumo %s is not available", self._name)
             return
 
-        try:
-            mode_to_set = HA_STATE_TO_KUMO[kwargs.get(ATTR_HVAC_MODE)]
-        except KeyError:
-            mode_to_set = None
+        # Validate arguments
+        current_mode = self._hvac_mode
+        proposed_mode = kwargs.get(ATTR_HVAC_MODE)
+        target_mode = proposed_mode or current_mode
 
-        if mode_to_set is None:
-            mode_to_set = HA_STATE_TO_KUMO[self.hvac_mode]
-
-        if mode_to_set not in (KUMO_STATE_AUTO, KUMO_STATE_COOL, KUMO_STATE_HEAT):
+        if target_mode not in [
+                HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT]:
             _LOGGER.warning(
                 "Kumo %s not setting target temperature for mode %s",
-                self._name,
-                mode_to_set,
-            )
+                self._name, target_mode)
             return
 
-        if mode_to_set == KUMO_STATE_HEAT:
-            response = self._pykumo.set_heat_setpoint(target["setpoint"])
-        elif mode_to_set == KUMO_STATE_COOL:
-            response = self._pykumo.set_cool_setpoint(target["setpoint"])
-        else:
-            heat_response = self._pykumo.set_heat_setpoint(target["heat"])
-            cool_response = self._pykumo.set_cool_setpoint(target["cool"])
-            response = {"heat": heat_response, "cool": cool_response}
+        target = {}
+        try:
+            if target_mode == HVAC_MODE_HEAT_COOL:
+                target["cool"] = kwargs.get(ATTR_TARGET_TEMP_HIGH)
+                target["heat"] = kwargs.get(ATTR_TARGET_TEMP_LOW)
+                if target["cool"] < target["heat"]:
+                    _LOGGER.warning("Kumo %s heat_cool setpoints are inverted",
+                                    self._name)
+                    target["cool"] = target["heat"]
+            elif target_mode == HVAC_MODE_COOL:
+                target["cool"] = kwargs.get(ATTR_TEMPERATURE)
+            elif target_mode == HVAC_MODE_HEAT:
+                target["heat"] = kwargs.get(ATTR_TEMPERATURE)
+        except KeyError as ke:
+            _LOGGER.warning("Kumo %s set temp: %s required to set temp for %s ",
+                          self._name, ke, target_mode)
+            return
 
-        _LOGGER.debug("Kumo %s set temp: %s C", self._name, target)
-        _LOGGER.debug("Kumo %s set temp response: %s", self._name, response)
+        if current_mode != target_mode:
+            self._set_hvac_mode(target_mode)
+
+        if "cool" in target:
+            response = self._pykumo.set_cool_setpoint(target["cool"])
+            _LOGGER.debug("Kumo %s set %s temp response: %s", self._name,
+                          "cool", str(response))
+        if "heat" in target:
+            response = self._pykumo.set_heat_setpoint(target["heat"])
+            _LOGGER.debug("Kumo %s set %s temp response: %s", self._name,
+                          "cool", str(response))
 
     def set_hvac_mode(self, hvac_mode):
         """Set new target operation mode."""
@@ -495,6 +543,10 @@ class KumoThermostat(ClimateEntity):
         except KeyError:
             mode = "off"
 
+        if not self.available:
+            _LOGGER.warning("Kumo %s is not available", self._name)
+            return
+
         response = self._pykumo.set_mode(mode)
         _LOGGER.debug(
             "Kumo %s set mode %s response: %s", self._name, hvac_mode, response
@@ -502,10 +554,18 @@ class KumoThermostat(ClimateEntity):
 
     def set_swing_mode(self, swing_mode):
         """Set new vane swing mode."""
+        if not self.available:
+            _LOGGER.warning("Kumo %s is not available", self._name)
+            return
+
         response = self._pykumo.set_vane_direction(swing_mode)
         _LOGGER.debug("Kumo %s set swing mode response: %s", self._name, response)
 
     def set_fan_mode(self, fan_mode):
         """Set new fan speed mode."""
+        if not self.available:
+            _LOGGER.warning("Kumo %s is not available", self._name)
+            return
+
         response = self._pykumo.set_fan_speed(fan_mode)
         _LOGGER.debug("Kumo %s set fan speed response: %s", self._name, response)
