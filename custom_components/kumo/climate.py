@@ -525,7 +525,7 @@ class KumoThermostat(ClimateEntity):
             return
 
         if current_mode != target_mode:
-            self._set_hvac_mode(target_mode)
+            self.set_hvac_mode(target_mode)
 
         if "cool" in target:
             response = self._pykumo.set_cool_setpoint(target["cool"])
