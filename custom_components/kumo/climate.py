@@ -49,6 +49,9 @@ CONF_CONFIG = "config"
 
 ATTR_FILTER_DIRTY = "filter_dirty"
 ATTR_DEFROST = "defrost"
+ATTR_RSSI = "rssi"
+ATTR_SENSOR_RSSI = "sensor_rssi"
+ATTR_RUNSTATE = "runstate"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -96,7 +99,7 @@ KUMO_STATE_TO_HA_ACTION = {
     KUMO_STATE_OFF: CURRENT_HVAC_OFF,
 }
 MAX_SETUP_TRIES = 10
-
+MAX_AVAILABILITY_TRIES = 3
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Kumo thermostats."""
@@ -201,6 +204,9 @@ class KumoThermostat(ClimateEntity):
         "battery_percent",
         "filter_dirty",
         "defrost",
+        "rssi",
+        "sensor_rssi",
+        "runstate",
     ]
 
     def __init__(self, kumo_api, unit):
@@ -220,6 +226,9 @@ class KumoThermostat(ClimateEntity):
         self._battery_percent = None
         self._filter_dirty = None
         self._defrost = None
+        self._rssi = None
+        self._sensor_rssi = None
+        self._runstate = None
         self._pykumo = kumo_api
         self._fan_modes = self._pykumo.get_fan_speeds()
         self._swing_modes = self._pykumo.get_vane_directions()
@@ -246,15 +255,25 @@ class KumoThermostat(ClimateEntity):
                     prop,
                     str(err),
                 )
+        self._unavailable_count = 0
         self._available = False
 
     def update(self):
         """Call from HA to trigger a refresh of cached state."""
         for prop in KumoThermostat._update_properties:
             self._update_property(prop)
-            if not self.available:
+            if self._unavailable_count > 1:
                 # Get out early if it's failing
                 break
+
+    def _update_availability(self, success):
+        if success:
+            self._available = True
+            self._unavailable_count = 0
+        else:
+            self._unavailable_count += 1
+            if self._unavailable_count >= MAX_AVAILABILITY_TRIES:
+                self._available = False
 
     def _update_property(self, prop):
         """Call to refresh the value of a property -- may block on I/O."""
@@ -266,10 +285,9 @@ class KumoThermostat(ClimateEntity):
             )
             return
         success = self._pykumo.update_status()
+        self._update_availability(success)
         if not success:
-            self._available = False
             return
-        self._available = True
         do_update()
 
     @property
@@ -443,6 +461,36 @@ class KumoThermostat(ClimateEntity):
         self._filter_dirty = dirty
 
     @property
+    def rssi(self):
+        """Return WiFi RSSI, if any."""
+        return self._rssi
+
+    def _update_rssi(self):
+        """Refresh the cached rssi attribute."""
+        rssi = self._pykumo.get_wifi_rssi()
+        self._rssi = rssi
+
+    @property
+    def sensor_rssi(self):
+        """Return sensor RSSI, if any."""
+        return self._sensor_rssi
+
+    def _update_sensor_rssi(self):
+        """Refresh the cached sensor_rssi attribute."""
+        rssi = self._pykumo.get_sensor_rssi()
+        self._sensor_rssi = rssi
+
+    @property
+    def runstate(self):
+        """Return unit's current runstate."""
+        return self._runstate
+
+    def _update_runstate(self):
+        """Refresh the cached runstate attribute."""
+        runstate = self._pykumo.get_runstate()
+        self._runstate = runstate
+
+    @property
     def defrost(self):
         """Return whether in defrost mode."""
         return self._defrost
@@ -462,6 +510,12 @@ class KumoThermostat(ClimateEntity):
             attr[ATTR_FILTER_DIRTY] = self._filter_dirty
         if self._defrost is not None:
             attr[ATTR_DEFROST] = self._defrost
+        if self._rssi is not None:
+            attr[ATTR_RSSI] = self._rssi
+        if self._sensor_rssi is not None:
+            attr[ATTR_SENSOR_RSSI] = self._sensor_rssi
+        if self._runstate is not None:
+            attr[ATTR_RUNSTATE] = self._runstate
 
         return attr
 
