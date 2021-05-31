@@ -6,6 +6,7 @@ from pykumo import KumoCloudAccount
 from homeassistant import config_entries, core, exceptions
 from homeassistant.core import callback
 from .const import DOMAIN
+
 DEFAULT_PREFER_CACHE = False
 _LOGGER = logging.getLogger(__name__)
 

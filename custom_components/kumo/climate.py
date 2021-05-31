@@ -32,11 +32,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_TARGET_TEMPERATURE_RANGE,
 )
-from homeassistant.const import (
-    ATTR_BATTERY_LEVEL,
-    ATTR_TEMPERATURE,
-    TEMP_CELSIUS
-)
+from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, TEMP_CELSIUS
 import homeassistant.helpers.config_validation as cv
 
 from . import CONF_CONNECT_TIMEOUT, CONF_RESPONSE_TIMEOUT, KUMO_DATA
@@ -102,6 +98,7 @@ KUMO_STATE_TO_HA_ACTION = {
 MAX_SETUP_TRIES = 10
 MAX_AVAILABILITY_TRIES = 3
 
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Kumo thermostats."""
     data = hass.data[DOMAIN]
@@ -110,8 +107,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         raise HomeAssistantError("Giving up trying to set up Kumo")
 
     devices = []
-    units = await hass.async_add_executor_job(
-        data.get_account().get_indoor_units)
+    units = await hass.async_add_executor_job(data.get_account().get_indoor_units)
     for unit in units:
         name = data.get_account().get_name(unit)
         address = data.get_account().get_address(unit)
@@ -134,14 +130,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
     if not devices:
-        _LOGGER.warning("Kumo could not set up any indoor units (try %d of %d)",
-                        data._setup_tries, MAX_SETUP_TRIES)
+        _LOGGER.warning(
+            "Kumo could not set up any indoor units (try %d of %d)",
+            data._setup_tries,
+            MAX_SETUP_TRIES,
+        )
         raise PlatformNotReady
     async_add_entities(devices, True)
 
 
-async def async_setup_platform(
-        hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Kumo thermostats. Run Once"""
     global __PLATFORM_IS_SET_UP
     if __PLATFORM_IS_SET_UP:
@@ -183,9 +181,12 @@ async def async_setup_platform(
         devices.append(kumo_thermostat)
         _LOGGER.debug("Kumo adding entity: %s", name)
     if not devices:
-        _LOGGER.warning("Kumo could not set up any indoor units (try %d of %d)",
-                        data._setup_tries, MAX_SETUP_TRIES)
-        raise PlatformNotReady        
+        _LOGGER.warning(
+            "Kumo could not set up any indoor units (try %d of %d)",
+            data._setup_tries,
+            MAX_SETUP_TRIES,
+        )
+        raise PlatformNotReady
     async_add_entities(devices)
 
 
@@ -543,7 +544,10 @@ class KumoThermostat(ClimateEntity):
         """Set new target temperature."""
         _LOGGER.debug(
             "Kumo %s set temp: %s, current mode %s",
-            self._name, pprint.pformat(kwargs), self._hvac_mode)
+            self._name,
+            pprint.pformat(kwargs),
+            self._hvac_mode,
+        )
 
         if not self.available:
             _LOGGER.warning("Kumo %s is not available", self._name)
@@ -554,11 +558,12 @@ class KumoThermostat(ClimateEntity):
         proposed_mode = kwargs.get(ATTR_HVAC_MODE)
         target_mode = proposed_mode or current_mode
 
-        if target_mode not in [
-                HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT]:
+        if target_mode not in [HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT]:
             _LOGGER.warning(
                 "Kumo %s not setting target temperature for mode %s",
-                self._name, target_mode)
+                self._name,
+                target_mode,
+            )
             return
 
         target = {}
@@ -567,16 +572,21 @@ class KumoThermostat(ClimateEntity):
                 target["cool"] = kwargs.get(ATTR_TARGET_TEMP_HIGH)
                 target["heat"] = kwargs.get(ATTR_TARGET_TEMP_LOW)
                 if target["cool"] < target["heat"]:
-                    _LOGGER.warning("Kumo %s heat_cool setpoints are inverted",
-                                    self._name)
+                    _LOGGER.warning(
+                        "Kumo %s heat_cool setpoints are inverted", self._name
+                    )
                     target["cool"] = target["heat"]
             elif target_mode == HVAC_MODE_COOL:
                 target["cool"] = kwargs.get(ATTR_TEMPERATURE)
             elif target_mode == HVAC_MODE_HEAT:
                 target["heat"] = kwargs.get(ATTR_TEMPERATURE)
         except KeyError as ke:
-            _LOGGER.warning("Kumo %s set temp: %s required to set temp for %s ",
-                          self._name, ke, target_mode)
+            _LOGGER.warning(
+                "Kumo %s set temp: %s required to set temp for %s ",
+                self._name,
+                ke,
+                target_mode,
+            )
             return
 
         if current_mode != target_mode:
@@ -584,12 +594,14 @@ class KumoThermostat(ClimateEntity):
 
         if "cool" in target:
             response = self._pykumo.set_cool_setpoint(target["cool"])
-            _LOGGER.debug("Kumo %s set %s temp response: %s", self._name,
-                          "cool", str(response))
+            _LOGGER.debug(
+                "Kumo %s set %s temp response: %s", self._name, "cool", str(response)
+            )
         if "heat" in target:
             response = self._pykumo.set_heat_setpoint(target["heat"])
-            _LOGGER.debug("Kumo %s set %s temp response: %s", self._name,
-                          "cool", str(response))
+            _LOGGER.debug(
+                "Kumo %s set %s temp response: %s", self._name, "cool", str(response)
+            )
 
     def set_hvac_mode(self, hvac_mode):
         """Set new target operation mode."""
