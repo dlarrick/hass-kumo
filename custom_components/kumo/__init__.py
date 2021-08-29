@@ -11,9 +11,14 @@ from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from homeassistant.util.json import load_json, save_json
 
-from .const import (CONF_CONNECT_TIMEOUT, CONF_PREFER_CACHE,
-                    CONF_RESPONSE_TIMEOUT, DOMAIN, KUMO_CONFIG_CACHE,
-                    KUMO_DATA)
+from .const import (
+    CONF_CONNECT_TIMEOUT,
+    CONF_PREFER_CACHE,
+    CONF_RESPONSE_TIMEOUT,
+    DOMAIN,
+    KUMO_CONFIG_CACHE,
+    KUMO_DATA,
+)
 
 _LOGGER = logging.getLogger(__name__)
 

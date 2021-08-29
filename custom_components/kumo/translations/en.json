@@ -15,15 +15,34 @@
           "password": "[KumoCloud Password]",
           "prefer_cache": "[Prefer Local Cache]"
         }
+      },
+      "confirm": {
+        "title": "IP Assignment",
+        "description": "Kumo failed to return an IP for the following units, please replace the text with the local IP"
       }
     }
   },
   "options": {
     "step": {
       "init": {
+        "title": "Configure Kumo",
+        "description": "What would you like to edit?",
         "data": {
-          "connect_timeout": "[Connection Timout]",
-          "response_timeout": "[Response Timeout]"
+          "edit_select": "Edit"
+        }
+      },
+      "timeout_settings": {
+        "data": {
+          "connect_timeout": "Connection Timout",
+          "response_timeout": "Response Timeout"
+        }
+      },
+      "unit_select": {
+        "title": "You can set the local IP of your unit in the cache file here",
+        "description": "You must reload the integration after setting IP addresses",
+        "data": {
+          "unit_label": "Unit Label",
+          "ip_address": "IP Address"
         }
       }
     }
