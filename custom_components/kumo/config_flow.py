@@ -1,13 +1,12 @@
 """Config flow for Kumo integration."""
 import logging
+
 import voluptuous as vol
 from homeassistant import config_entries, core, exceptions
 from homeassistant.core import callback
 from homeassistant.util.json import load_json, save_json
 from pykumo import KumoCloudAccount
 from requests.exceptions import ConnectionError
-from homeassistant.util.json import load_json, save_json
-
 
 from .const import DOMAIN, KUMO_CONFIG_CACHE
 
@@ -83,15 +82,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 "mac": raw_unit["mac"],
                             }
                         )
-                    if 'children' in child:
-                        for grandchild in child['children']:
-                            for raw_unit in grandchild['zoneTable'].values():
+                    if "children" in child:
+                        for grandchild in child["children"]:
+                            for raw_unit in grandchild["zoneTable"].values():
                                 self.units.append(
                                     {
-                                    "label": raw_unit["label"],
-                                    "ip_address": raw_unit.get("address", "empty"),
-                                    "mac": raw_unit["mac"],
-                            }  
+                                        "label": raw_unit["label"],
+                                        "ip_address": raw_unit.get("address", "empty"),
+                                        "mac": raw_unit["mac"],
+                                    }
                                 )
                 ip_addresses = []
                 for x in self.units:
@@ -139,11 +138,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     for raw_unit in child["zoneTable"].values():
                         if x == raw_unit["label"]:
                             raw_unit["address"] = user_input[x]
-                    if 'children' in child:
-                        for grandchild in child['children']:
-                            for raw_unit in grandchild['zoneTable'].values():
-                                if x == raw_unit['label']:
-                                    raw_unit['address'] = user_input[x]
+                    if "children" in child:
+                        for grandchild in child["children"]:
+                            for raw_unit in grandchild["zoneTable"].values():
+                                if x == raw_unit["label"]:
+                                    raw_unit["address"] = user_input[x]
             await self.hass.async_add_executor_job(
                 save_json, self.hass.config.path(KUMO_CONFIG_CACHE), self.kumo_cache
             )
@@ -221,9 +220,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 kumo_unit_list[str(raw_unit["label"])] = (
                     str(raw_unit.get("address", "empty")),
                 )
-            if 'children' in child:
-                for grandchild in child['children']:
-                    for raw_unit in grandchild['zoneTable'].values():
+            if "children" in child:
+                for grandchild in child["children"]:
+                    for raw_unit in grandchild["zoneTable"].values():
                         kumo_unit_list[str(raw_unit["label"])] = (
                             str(raw_unit.get("address", "empty")),
                         )
@@ -233,9 +232,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 for raw_unit in child["zoneTable"].values():
                     if raw_unit["label"] == user_input["unit_label"]:
                         raw_unit["address"] = user_input["ip_address"]
-                    if 'children' in child:
-                        for grandchild in child['children']:
-                            for raw_unit in grandchild['zoneTable'].values():
+                    if "children" in child:
+                        for grandchild in child["children"]:
+                            for raw_unit in grandchild["zoneTable"].values():
                                 if raw_unit["label"] == user_input["unit_label"]:
                                     raw_unit["address"] = user_input["ip_address"]
             await self.hass.async_add_executor_job(
@@ -259,4 +258,3 @@ class CannotConnect(exceptions.HomeAssistantError):
 
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
-
