@@ -46,7 +46,7 @@ Add the referenced secrets to your secrets.yaml.
 
 Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at HA startup, if `prefer_cache` is False) from the Kumo Cloud web service. Therefore, it is strongly recommended to use a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
 
-In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the GUI using the "Configure" button on Kumo's Integrations tile.
+In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the GUI using the "Configure" button on Kumo's tile in the Integrations section of configuration settings.
 
 ## Home Assistant Entities and Control
 
