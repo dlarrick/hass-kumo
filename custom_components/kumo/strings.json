@@ -17,15 +17,31 @@
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-    }
+    },
+    "request_ips": {"title": "IP Assignment", "description": "Kumo failed to return an IP for the following units:"}
   }
 },
 "options": {
   "step": {
     "init": {
+      "title": "Configure Kumo",
+      "description": "What would you like to edit?",
+      "data": {
+        "edit_select": "Edit"
+      }
+    },
+    "timeout_settings": {
       "data": {
         "connect_timeout": "Connect Timeout",
-        "response_timeout": "Response Timeout"
+        "response_timeout": "Response Timeout",
+      }
+    },
+    "unit_select": {
+      "title": "You can set the local IP of your unit in the cache file here",
+      "description": "You must reload the integration after setting IP addresses",
+      "data": {
+        "unit_label": "Unit Name",
+        "ip_address": "IP Address"
 
       }
     }

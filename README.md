@@ -42,6 +42,12 @@ Add the referenced secrets to your secrets.yaml.
 - `prefer_cache`, if present, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage. 
 - `connect_timeout` and `response_timeout`, if present, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall HA responsivness if you anticipate your units being offline.
 
+### IP Addresses
+
+Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at HA startup, if `prefer_cache` is False) from the Kumo Cloud web service. Therefore, it is strongly recommended to use a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
+
+In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the GUI using the "Configure" button on Kumo's tile in the Integrations section of configuration settings.
+
 ## Home Assistant Entities and Control
 
 Each indoor unit appears as a separate [`climate`](https://www.home-assistant.io/integrations/climate/) entity in Home Assistant. Entity names are derived from the name you created for the unit in KumoCloud. For example, `climate.bedroom` or `climate.living_room`. 
