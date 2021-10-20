@@ -155,7 +155,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 },
             )
         return self.async_show_form(
-            step_id="confirm",
+            step_id="request_ips",
             data_schema=vol.Schema(data_schema),
             description_placeholders=self.user_account_setup,
         )
