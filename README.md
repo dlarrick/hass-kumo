@@ -56,7 +56,7 @@ Entity attributes can tell you more about the current state of the indoor unit, 
 
 - `hvac_modes`: The different modes of operation supported by the unit. For example: `off, cool, dry, heat, fan_only`.
 - `min_temp`: The minimum temperature the unit can be set to. For example, `45`.
-- `max_temp`: The maximum temperature the unit can be set to: For exampoe, `95`.
+- `max_temp`: The maximum temperature the unit can be set to: For example, `95`.
 - `fan_modes`: The different modes supported for the fan. This corresponds to fan speed, and noise. For example: `superQuiet, quiet, low, powerful, superPowerful, auto`. 
 - `swing_modes`: The different modes supported for the fan vanes. For example: `horizontal, midhorizontal, midpoint, midvertical, auto, swing`.
 - `current_temperature`: The current ambient temperature, as sensed by the indoor unit. For example, `73`.
