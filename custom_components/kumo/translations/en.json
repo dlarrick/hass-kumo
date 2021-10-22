@@ -4,16 +4,16 @@
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     },
     "error": {
-      "cannot_connect": "[Cannot Connect to KumoCloud, check internet connection]",
-      "invalid_auth": "[Invalid Credentials, Wrong user or password]",
+      "cannot_connect": "Cannot Connect to KumoCloud, check internet connection",
+      "invalid_auth": "Invalid Credentials, Wrong user or password",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "step": {
       "user": {
         "data": {
-          "username": "[KumoCloud Username (Email Address)]",
-          "password": "[KumoCloud Password]",
-          "prefer_cache": "[Prefer Local Cache]"
+          "username": "KumoCloud Username (Email Address)",
+          "password": "KumoCloud Password",
+          "prefer_cache": "Prefer Local Cache"
         }
       },
       "request_ips": {
