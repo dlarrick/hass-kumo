@@ -121,7 +121,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         response_timeout = float(
             data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, "8")
         )
-        kumo_api = pykumo.PyKumo(
+        kumo_api = pykumo.PyKumoIndoorUnit(
             name, address, credentials, (connect_timeout, response_timeout)
         )
         success = await hass.async_add_executor_job(kumo_api.update_status)

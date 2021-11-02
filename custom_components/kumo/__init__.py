@@ -70,6 +70,8 @@ def setup_kumo(hass, config):
     """Set up the Kumo indoor units."""
     hass.async_create_task(async_load_platform(hass, "climate", DOMAIN, {}, config))
     hass.async_add_job(hass.config_entries.async_forward_entry_setup(config, "climate"))
+    hass.async_create_task(async_load_platform(hass, "sensor", DOMAIN, {}, config))
+    hass.async_add_job(hass.config_entries.async_forward_entry_setup(config, "sensor"))
 
 
 async def async_setup(hass, config):
@@ -202,6 +204,9 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, "climate")
         )
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, "sensor")
+        )
         return True
     _LOGGER.warning("Could not load config from KumoCloud server or cache")
     return False
@@ -212,4 +217,5 @@ async def async_unload_entry(hass: HomeAssistantType, entry: ConfigEntry):
     hass.data.pop(DOMAIN)
     tasks = []
     tasks.append(hass.config_entries.async_forward_entry_unload(entry, "climate"))
+    tasks.append(hass.config_entries.async_forward_entry_unload(entry, "sensor"))
     return all(await asyncio.gather(*tasks))
