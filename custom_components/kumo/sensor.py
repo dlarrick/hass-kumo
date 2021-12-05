@@ -1,14 +1,12 @@
 """HomeAssistant sensor component for Kumo Station Device."""
 import logging
-import pprint
-from datetime import timedelta
 
-import pykumo
 import voluptuous as vol
 from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.exceptions import HomeAssistantError, PlatformNotReady
 
-from .const import DOMAIN
+from .const import DOMAIN, KUMO_DATA_COORDINATORS
+from .coordinator import KumoDataUpdateCoordinator
+from .entity import CoordinatedKumoEntitty
 
 try:
     from homeassistant.components.sensor import SensorEntity
@@ -16,19 +14,19 @@ except ImportError:
     from homeassistant.components.sensor import SensorDevice as SensorEntity
 
 import homeassistant.helpers.config_validation as cv
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (DEVICE_CLASS_SIGNAL_STRENGTH,
+                                 DEVICE_CLASS_TEMPERATURE,
+                                 SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS)
+from homeassistant.helpers.typing import HomeAssistantType
 
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_TEMPERATURE, CONF_SCAN_INTERVAL
-
-from . import CONF_CONNECT_TIMEOUT, CONF_RESPONSE_TIMEOUT, KUMO_DATA
+from . import KUMO_DATA
 
 _LOGGER = logging.getLogger(__name__)
-__PLATFORM_IS_SET_UP = False
 
 CONF_NAME = "name"
 CONF_ADDRESS = "address"
 CONF_CONFIG = "config"
-
-ATTR_RSSI = "rssi"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -38,129 +36,39 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     }
 )
 
-MAX_SETUP_TRIES = 10
-MAX_AVAILABILITY_TRIES = 3
+async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_add_entities):
+    """Set up the Kumo thermostats."""
+    account = hass.data[DOMAIN][entry.entry_id][KUMO_DATA].get_account()
+    coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
 
-SCAN_INTERVAL = timedelta(seconds=60)
+    entities = []
+    all_serials = await hass.async_add_executor_job(account.get_all_units)
+    for serial in all_serials:
+        coordinator = coordinators[serial]
+        entities.append(KumoWifiSignal(coordinator))
+        _LOGGER.debug("Adding entity: wifi_signal for %s", coordinator.get_device().get_name())
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Kumo Stations."""
-    data = hass.data[DOMAIN]
-    data._setup_tries += 1
-    if data._setup_tries > MAX_SETUP_TRIES:
-        raise HomeAssistantError("Giving up trying to set up Kumo")
+    kumo_station_serials = await hass.async_add_executor_job(account.get_kumo_stations)
+    for serial in kumo_station_serials:
+        coordinator = coordinators[serial]
+        entities.append(KumoStationOutdoorTemperature(coordinator))
+        _LOGGER.debug("Adding entity: outdoor_temperature for %s", coordinator.get_device().get_name())
 
-    devices = []
-    units = await hass.async_add_executor_job(data.get_account().get_kumo_stations)
-    for unit in units:
-        name = data.get_account().get_name(unit)
-        address = data.get_account().get_address(unit)
-        credentials = data.get_account().get_credentials(unit)
-        connect_timeout = float(
-            data.get_domain_options().get(CONF_CONNECT_TIMEOUT, "1.2")
-        )
-        response_timeout = float(
-            data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, "8")
-        )
-        kumo_api = pykumo.PyKumoStation(
-            name, address, credentials, (connect_timeout, response_timeout)
-        )
-        success = await hass.async_add_executor_job(kumo_api.update_status)
-        if not success:
-            _LOGGER.warning("Kumo %s could not be set up", name)
-            continue
-        kumo_station = KumoStationOutdoorTemperature(kumo_api, unit)
-        await hass.async_add_executor_job(kumo_station.update)
-        devices.append(kumo_station)
-        _LOGGER.debug("Kumo adding entity: %s", name)
+    if entities:
+        async_add_entities(entities, True)
 
-    if devices:
-        async_add_entities(devices, True)
-
-
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up Kumo Stations. Run Once"""
-    global __PLATFORM_IS_SET_UP
-    if __PLATFORM_IS_SET_UP:
-        return
-    __PLATFORM_IS_SET_UP = True
-
-    data = hass.data[KUMO_DATA]
-    data._setup_tries += 1
-    if data._setup_tries > MAX_SETUP_TRIES:
-        raise HomeAssistantError("Giving up trying to set up Kumo Stations")
-
-    devices = []
-    units = data.get_account().get_kumo_stations()
-    for unit in units:
-        name = data.get_account().get_name(unit)
-        address = data.get_account().get_address(unit)
-        credentials = data.get_account().get_credentials(unit)
-        if data.get_domain_options().get(CONF_CONNECT_TIMEOUT) is None:
-            connect_timeout = 1.2
-        else:
-            connect_timeout = float(
-                data.get_domain_options().get(CONF_CONNECT_TIMEOUT, "1.2")
-            )
-        if data.get_domain_options().get(CONF_RESPONSE_TIMEOUT) is None:
-            response_timeout = 8.0
-        else:
-            response_timeout = float(
-                data.get_domain_options().get(CONF_RESPONSE_TIMEOUT, "8")
-            )
-        kumo_api = pykumo.PyKumoStation(
-            name, address, credentials, (connect_timeout, response_timeout)
-        )
-        success = await hass.async_add_executor_job(kumo_api.update_status)
-        if not success:
-            _LOGGER.warning("Kumo %s could not be set up", name)
-            continue
-        kumo_station = KumoStationOutdoorTemperature(kumo_api, unit)
-        await hass.async_add_executor_job(kumo_station.update)
-        devices.append(kumo_station)
-        _LOGGER.debug("Kumo adding entity: %s", name)
-    if devices:
-        async_add_entities(devices)
-
-
-class KumoStationOutdoorTemperature(SensorEntity):
+class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
     """Representation of a Kumo Station Outdoor Temperature Sensor."""
 
-    def __init__(self, kumo_api, unit):
+    def __init__(self, coordinator: KumoDataUpdateCoordinator):
         """Initialize the kumo station."""
-
-        self._name = kumo_api.get_name() + " Outdoor Temperature"
-        self._identifier = unit
-        self._outdoor_temperature = None
-        self._rssi = None
-        self._pykumo = kumo_api
-        self._unavailable_count = 0
-        self._available = False
-
-    def update(self):
-        """Call from HA to trigger a refresh of cached state."""
-        success = self._pykumo.update_status()
-        self._update_availability(success)
-        self._outdoor_temperature = self._pykumo.get_outdoor_temperature()
-
-    def _update_availability(self, success):
-        if success:
-            self._available = True
-            self._unavailable_count = 0
-        else:
-            self._unavailable_count += 1
-            if self._unavailable_count >= MAX_AVAILABILITY_TRIES:
-                self._available = False
+        super().__init__(coordinator)
+        self._name = self._pykumo.get_name() + " Outdoor Temperature"
 
     @property
-    def available(self):
-        """Return whether Home Assistant is able to read the state and control the underlying device."""
-        return self._available
-
-    @property
-    def name(self):
-        """Return the name of the thermostat, if any."""
-        return self._name
+    def unique_id(self):
+        """Return unique id"""
+        return f"{self._identifier}-outdoor-temperature"
 
     @property
     def native_unit_of_measurement(self):
@@ -170,27 +78,43 @@ class KumoStationOutdoorTemperature(SensorEntity):
     @property
     def native_value(self):
         """Return the high dual setpoint temperature."""
-        return self._outdoor_temperature
+        return self._pykumo.get_outdoor_temperature()
 
     @property
     def device_class(self):
         return DEVICE_CLASS_TEMPERATURE
+        # return SensorDeviceClass.TEMPERATURE # Not yet available
 
-    @property
-    def should_poll(self):
-        """Return the polling state."""
-        return True
+class KumoWifiSignal(CoordinatedKumoEntitty, SensorEntity):
+    """Representation of a Kumo's WiFi Signal Strength."""
+
+    def __init__(self, coordinator: KumoDataUpdateCoordinator):
+        """Initialize the kumo station."""
+        super().__init__(coordinator)
+        self._name = self._pykumo.get_name() + " Signal Strength"
 
     @property
     def unique_id(self):
         """Return unique id"""
-        return self._identifier
+        return f"{self._identifier}-signal-strength"
 
     @property
-    def device_info(self):
-        """Return device information for this Kumo Station"""
-        return {
-            "identifiers": {(DOMAIN, self._identifier)},
-            "name": self.name,
-            "manufacturer": "Mistubishi",
-        }
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement which this thermostat uses."""
+        return SIGNAL_STRENGTH_DECIBELS
+
+    @property
+    def native_value(self):
+        """Return the WiFi signal rssi."""
+        return self._pykumo.get_wifi_rssi()
+
+    @property
+    def device_class(self):
+        return DEVICE_CLASS_SIGNAL_STRENGTH
+        # return SensorDeviceClass.SIGNAL_STRENGTH # Not yet available
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Disable entity by default."""
+        return False
+
