@@ -506,7 +506,7 @@ class KumoThermostat(ClimateEntity):
         self._defrost = defrost
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes of the device."""
         attr = {}
         if self._battery_percent is not None:
