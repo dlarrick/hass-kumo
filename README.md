@@ -8,12 +8,14 @@ Mitubishi Kumo Cloud (Kumo for short) is a custom component for Home Assistant t
 - Implements standard Home Assistant [`climate`](https://www.home-assistant.io/integrations/climate/) entities.
 - Supports reading and setting the mode (heat/cool/etc.), setpoint, fan speed, and vane swing.
 - Supports fully local control, except for initial setup. (See `prefer_cache` in Configuration for details.)
+- Supports displaying Outdoor Temperature for Kumo Station
+- Supports displaying WiFi RSSI of each unit(disabled by default)
 
 ## Installation
 
-You can install Kumo in one of two ways. 
+You can install Kumo in one of two ways.
 
-- **Automatic Installation.** Kumo is available in the HACS default store. Search for "Kumo" in the Integrations panel, and then click the **Mitsubishi Kumo Cloud** item in the results. Click the Install link, and then restart Home Assistant. 
+- **Automatic Installation.** Kumo is available in the HACS default store. Search for "Kumo" in the Integrations panel, and then click the **Mitsubishi Kumo Cloud** item in the results. Click the Install link, and then restart Home Assistant.
 - **Manual Installation.** To control your installation yourself, download the hass-kumo repo, and then copy the `custom_components/kumo` directory into a corresponding `custom_components/kumo` within your Home Assistant configuration directory. Then restart Home Assistant.
 
 We recommend using the HACS installation method, which makes future updates to Kumo easy to track and install. Click the HACS badge above for details on installing and using HACS.
@@ -39,7 +41,7 @@ kumo:
 
 Add the referenced secrets to your secrets.yaml.
 
-- `prefer_cache`, if present, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage. 
+- `prefer_cache`, if present, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage.
 - `connect_timeout` and `response_timeout`, if present, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall HA responsivness if you anticipate your units being offline.
 
 ### IP Addresses
@@ -51,14 +53,14 @@ In some cases, Kumo is unable to retrieve the indoor units' addresses from the K
 
 ## Home Assistant Entities and Control
 
-Each indoor unit appears as a separate [`climate`](https://www.home-assistant.io/integrations/climate/) entity in Home Assistant. Entity names are derived from the name you created for the unit in KumoCloud. For example, `climate.bedroom` or `climate.living_room`. 
+Each indoor unit appears as a separate [`climate`](https://www.home-assistant.io/integrations/climate/) entity in Home Assistant. Entity names are derived from the name you created for the unit in KumoCloud. For example, `climate.bedroom` or `climate.living_room`.
 
 Entity attributes can tell you more about the current state of the indoor unit, as well as the unit's capabilities. Attributes may include the following:
 
 - `hvac_modes`: The different modes of operation supported by the unit. For example: `off, cool, dry, heat, fan_only`.
 - `min_temp`: The minimum temperature the unit can be set to. For example, `45`.
 - `max_temp`: The maximum temperature the unit can be set to: For example, `95`.
-- `fan_modes`: The different modes supported for the fan. This corresponds to fan speed, and noise. For example: `superQuiet, quiet, low, powerful, superPowerful, auto`. 
+- `fan_modes`: The different modes supported for the fan. This corresponds to fan speed, and noise. For example: `superQuiet, quiet, low, powerful, superPowerful, auto`.
 - `swing_modes`: The different modes supported for the fan vanes. For example: `horizontal, midhorizontal, midpoint, midvertical, auto, swing`.
 - `current_temperature`: The current ambient temperature, as sensed by the indoor unit. For example, `73`.
 - `temperature`: The target temperature. For example, `77`.
