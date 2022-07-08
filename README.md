@@ -8,8 +8,8 @@ Mitubishi Kumo Cloud (Kumo for short) is a custom component for Home Assistant t
 - Implements standard Home Assistant [`climate`](https://www.home-assistant.io/integrations/climate/) entities.
 - Supports reading and setting the mode (heat/cool/etc.), setpoint, fan speed, and vane swing.
 - Supports fully local control, except for initial setup. (See `prefer_cache` in Configuration for details.)
-- Supports displaying Outdoor Temperature for Kumo Station
-- Supports displaying WiFi RSSI of each unit(disabled by default)
+- Supports displaying the Outdoor Temperature for Kumo Station.
+- Supports displaying Wi-Fi signal strenth (RSSI) of each unit (disabled by default).
 
 ## Installation
 
@@ -22,13 +22,20 @@ We recommend using the HACS installation method, which makes future updates to K
 
 ## Configuration
 
-Configuration is now possible using the GUI:
+Configuration is possible using the Home Assistant user interface, or using YAML. We recommend the UI method.
 
-Simply go to Configuration->Integrations and add a new integration. Search for "Kumo" and select it.
-The dialog will prompt you for your KumoCloud user(email address) as well as your password. You will have the option to enable the prefer_cache option in this dialog. Once complete the Dialog will promt you to assign a Room for discovered devices.
-You will now have a card for the integration along with an "Options" link. In the Options Dialog you can change the default timeout values. Please note that the new values will not take effect until you restart HomeAssistant.
+1. In Home Assistant, go to Settings ➤ Devices & Services ➤ Integrations, and click **➕ Add Integration**. 
+2. Search for "Kumo" and select the **Kumo** item.
+3. When prompted, enter your KumoCloud username (email address) and password. 
+4. You can also enable the `prefer_cache` setting in this dialog. See details below.
+5. Click **Submit** to enable the integration and begin device discovery.
+6. Once discovery is complete:
+   - You'll be prompted to assign a room (Area in Home Assistant terminology) for all discovered devices.
+   - You _might_ be prompted to assign IP addresses for devices where Kumo didn’t receive an IP address from the KumoCloud service. See details below.
 
-Configuration for Kumo can also be configured using YAML. Add the following configuration to your configuration.yaml:
+Once the Kumo integration is added, you'll have a card for it on the Integrations page. (Integrations are sorted by name, and the name of this integration is "Kumo".) The Kumo integration card includes a "Configure" link. The configuration panel lets you change the default timeout values for device connections, or update IP addresses for configured units. **Important:** New values don't take effect until you restart Home Assistant.
+
+Kumo can also be configured using YAML. Add the following configuration to your `configuration.yaml`:
 
 ```
 kumo:
@@ -39,23 +46,25 @@ kumo:
   response_timeout: [float] (optional, in seconds, default 8.0)
 ```
 
-Add the referenced secrets to your secrets.yaml.
+Add the referenced secrets to your `secrets.yaml`.
 
 - `prefer_cache`, if present, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage.
-- `connect_timeout` and `response_timeout`, if present, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall HA responsivness if you anticipate your units being offline.
+- `connect_timeout` and `response_timeout`, if present, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall Home Assistant responsiveness if you anticipate your units being offline.
 
 ### IP Addresses
 
-Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at HA startup, if `prefer_cache` is False) from the Kumo Cloud web service. Therefore, it is strongly recommended to use a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
+Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at Home Assistant startup, if `prefer_cache` is False) from the Kumo Cloud web service. It is **strongly** recommended that you set a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
 
-In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the GUI using the "Configure" button on Kumo's tile in the Integrations section of configuration settings. Another thing to try, though, quoting @rhasselbaum's [Gist](https://gist.github.com/rhasselbaum/2e528ca6efc0c8adc765c0117d2c9389):
+In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings. 
+
+If you continue to have connection issues with your units, try using the Kumo Cloud app to force a refresh of your devices with KumoCloud. Quoting @rhasselbaum's [Gist](https://gist.github.com/rhasselbaum/2e528ca6efc0c8adc765c0117d2c9389):
 > So back into **Installer Settings**. I clicked on the unit there, and under **Advanced**, there is a **Refresh Setttings** option. Bingo! This resynchronizes the state of the device with Kumo Cloud, apparently. Clicked that, restarted HA again, and finally, it shows up!
 
 ## Home Assistant Entities and Control
 
 Each indoor unit appears as a separate [`climate`](https://www.home-assistant.io/integrations/climate/) entity in Home Assistant. Entity names are derived from the name you created for the unit in KumoCloud. For example, `climate.bedroom` or `climate.living_room`.
 
-Entity attributes can tell you more about the current state of the indoor unit, as well as the unit's capabilities. Attributes may include the following:
+Entity attributes can tell you more about the current state of the indoor unit, as well as the unit's capabilities. Attributes can include the following:
 
 - `hvac_modes`: The different modes of operation supported by the unit. For example: `off, cool, dry, heat, fan_only`.
 - `min_temp`: The minimum temperature the unit can be set to. For example, `45`.
@@ -69,11 +78,11 @@ Entity attributes can tell you more about the current state of the indoor unit, 
 - `swing_mode`: The current mode for the fan vanes. For example, `auto`.
 - `filter_dirty`: Indicates whether the indoor unit's filter is dirty. For example, `false`. (Not sure how dirty the filter needs to be for this to read `true`, but we've never seen it ourselves.)
 - `defrost`: Whether the unit is in defrost mode. For example, `false`.
-- `friendly_name`: The KumoCloud name the indoor unit, usually the room. For example, `Bedroom`.
+- `friendly_name`: The KumoCloud name for the indoor unit, usually the room. For example, `Bedroom`.
 
 ## Home Assistant Services and Control
 
-Use the standard `climate` service calls to control or automate each unit. Available services may include:
+Use the standard `climate` service calls to control or automate each unit. Available services can include:
 
 - `climate.set_temperature`
 - `climate.set_fan_mode`
@@ -86,7 +95,7 @@ Specific support and behavior can vary, depending on the capabilities of your in
 
 ## Home Assistant Sensors
 
-Useful information from indoor units is published as attributes on the associated `climate` entity. It's easier to use these attributes if you convert them to sensors using [templates](https://community.home-assistant.io/t/using-attributes-in-lovelace/72672). For example, here's a sensor for the target temperature.
+Useful information from indoor units is provided as attributes on the associated `climate` entity. It's easier to use these attributes if you convert them to sensors using [templates](https://community.home-assistant.io/t/using-attributes-in-lovelace/72672). For example, here's a simple sensor for the target temperature.
 
 ```yaml
 # Get attribute of climate state in form of sensor
@@ -98,9 +107,32 @@ Useful information from indoor units is published as attributes on the associate
       value_template: "{{ state_attr('climate.bedroom', 'temperature') }}"
 ```
 
+Here's a more complex template that sets additional entity attributes and takes certain error conditions into consideration:
+
+```yaml
+- platform: template
+  sensors:
+    temperature_bedroom_current:
+      friendly_name: "Bedroom Temperature"
+      device_class: temperature
+      unit_of_measurement: "°F"
+      value_template: >-
+        {%- if state_attr('climate.bedroom', 'current_temperature') != None %}
+          {{state_attr('climate.bedroom','current_temperature') | float }}
+        {%- endif %}
+      availability_template: >-
+        {%- if not is_state('climate.bedroom', 'unavailable') %}
+          true
+        {%- endif %}
+```
+
+This template was suggested in the community thread (see Support, below). It can be especially useful if, for example, you're experiencing connection issues with the integration due to problems with your wireless network.
+
 ## Support
 
-For support, see the [thread](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508/128) on the Home Assistant community. For bugs or feature improvements, feel free to create a GitHub issue or pull request.
+For support, see the [Kumo integration thread](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508) on the Home Assistant community. (To skip early development discussions, start with [the official availability announcement](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508/128) in that thread.) 
+
+For bugs or feature improvements, feel free to create a GitHub issue or pull request.
 
 ## Implementation Notes
 
@@ -109,14 +141,12 @@ For support, see the [thread](https://community.home-assistant.io/t/mitsubishi-k
 - Based on the [InComfort](https://github.com/royduin/home-assistant-incomfort) unofficial Home Assistant module as an example.
 - Many thanks to the [KumoJS](https://github.com/sushilks/kumojs) Node.js module author, who did the hard work of reverse-engineering how to access the Wi-Fi interface locally.
 
-
 ## TODO
 
 - Debugging for different types of indoor units.
 - Explore if other local APIs are available to provide additional useful information (whether a unit is calling, etc.).
 - Code cleanup. Code reviews welcome!
 - Possible enhancement: allow setup and control of schedules and operating modes on the indoor unit itself.
-- UI-guided setup in Home Assistant.
 - Possibly work toward inclusion as an official Home Assistant integration.
 
 ## Status
@@ -127,6 +157,7 @@ For support, see the [thread](https://community.home-assistant.io/t/mitsubishi-k
 - As of December 2019 there are a handful of people (including myself) successfully using the native Python module in Home Assistant.
 - As of January 2020, Kumo is available in the HACS default store, and I consider it feature-complete and stable.
 - April 2020, updated this README documentation file.
+- July 2022, updated this README file again for changed Home Assistant user interface elements, and other clarifications.
 
 ## License
 
