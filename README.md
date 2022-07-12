@@ -22,7 +22,7 @@ We recommend using the HACS installation method, which makes future updates to K
 
 ## Configuration
 
-Configuration Kumo using the Home Assistant user interface.
+Configure Kumo using the Home Assistant user interface.
 
 1. In Home Assistant, go to Settings ➤ Devices & Services ➤ Integrations, and click **➕ Add Integration**. 
 2. Search for "Kumo" and select the **Kumo** item.
