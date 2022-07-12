@@ -22,7 +22,7 @@ We recommend using the HACS installation method, which makes future updates to K
 
 ## Configuration
 
-Configuration is possible using the Home Assistant user interface, or using YAML. We recommend the UI method.
+Configuration Kumo using the Home Assistant user interface.
 
 1. In Home Assistant, go to Settings ➤ Devices & Services ➤ Integrations, and click **➕ Add Integration**. 
 2. Search for "Kumo" and select the **Kumo** item.
@@ -35,21 +35,8 @@ Configuration is possible using the Home Assistant user interface, or using YAML
 
 Once the Kumo integration is added, you'll have a card for it on the Integrations page. (Integrations are sorted by name, and the name of this integration is "Kumo".) The Kumo integration card includes a "Configure" link. The configuration panel lets you change the default timeout values for device connections, or update IP addresses for configured units. **Important:** New values don't take effect until you restart Home Assistant.
 
-Kumo can also be configured using YAML. Add the following configuration to your `configuration.yaml`:
-
-```
-kumo:
-  username: !secret kumo_username
-  password: !secret kumo_password
-  prefer_cache: [true|false] (optional)
-  connect_timeout: [float] (optional, in seconds, default 1.2)
-  response_timeout: [float] (optional, in seconds, default 8.0)
-```
-
-Add the referenced secrets to your `secrets.yaml`.
-
-- `prefer_cache`, if present, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage.
-- `connect_timeout` and `response_timeout`, if present, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall Home Assistant responsiveness if you anticipate your units being offline.
+- `prefer_cache`, if set, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage.
+- `connect_timeout` and `response_timeout`, if set, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall Home Assistant responsiveness if you anticipate your units being offline.
 
 ### IP Addresses
 
