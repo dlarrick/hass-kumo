@@ -195,9 +195,6 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
                 "Kumo %s: %s property updater not implemented", self._name, prop
             )
             return
-        success = self._pykumo.update_status()
-        if not success:
-            return
         do_update()
 
     @property
