@@ -13,6 +13,8 @@ Mitubishi Kumo Cloud (Kumo for short) is a custom component for Home Assistant t
 
 ## Installation
 
+**Note**: Kumo is not included in Home Assistant as an official integration. Instead, the recommended way to install it is through the [Home Assistant Community Store](https://hacs.xyz/docs/setup/download/) (HACS) add-in.
+
 You can install Kumo in one of two ways.
 
 - **Automatic Installation.** Kumo is available in the HACS default store. Search for "Kumo" in the Integrations panel, and then click the **Mitsubishi Kumo Cloud** item in the results. Click the Install link, and then restart Home Assistant.
