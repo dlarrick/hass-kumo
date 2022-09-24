@@ -422,7 +422,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         return {
             "identifiers": {(DOMAIN, self._identifier)},
             "name": self.name,
-            "manufacturer": "Mistubishi",
+            "manufacturer": "Mitsubishi",
         }
 
     def set_temperature(self, **kwargs):
