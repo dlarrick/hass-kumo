@@ -15,9 +15,8 @@ except ImportError:
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (DEVICE_CLASS_SIGNAL_STRENGTH,
-                                 DEVICE_CLASS_TEMPERATURE,
-                                 SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS)
+from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.typing import HomeAssistantType
 
 from . import KUMO_DATA
@@ -82,8 +81,7 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_TEMPERATURE
-        # return SensorDeviceClass.TEMPERATURE # Not yet available
+        return SensorDeviceClass.TEMPERATURE
 
 class KumoWifiSignal(CoordinatedKumoEntitty, SensorEntity):
     """Representation of a Kumo's WiFi Signal Strength."""
@@ -110,8 +108,7 @@ class KumoWifiSignal(CoordinatedKumoEntitty, SensorEntity):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_SIGNAL_STRENGTH
-        # return SensorDeviceClass.SIGNAL_STRENGTH # Not yet available
+        return SensorDeviceClass.SIGNAL_STRENGTH
 
     @property
     def entity_registry_enabled_default(self) -> bool:
