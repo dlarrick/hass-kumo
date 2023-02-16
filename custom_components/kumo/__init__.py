@@ -99,7 +99,9 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
             if device.get_serial() not in coordinators:
                 coordinators[device.get_serial()] = KumoDataUpdateCoordinator(hass, device)
 
-        hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+        for platform in PLATFORMS:
+            hass.async_create_task(
+                hass.config_entries.async_forward_entry_setup(entry, platform))
         return True
 
     _LOGGER.warning("Could not load config from KumoCloud server or cache")
@@ -130,7 +132,10 @@ async def async_kumo_setup(hass: HomeAssistantType, prefer_cache: bool, username
 
 async def async_unload_entry(hass: HomeAssistantType, entry: ConfigEntry):
     """Unload Entry"""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-    return unload_ok
+
+    for platform in PLATFORMS:
+        all_ok = True
+        unload_ok = await hass.config_entries.async_forward_entry_unload(entry, platform)
+        if not unload_ok:
+            all_ok = False
+    return all_ok

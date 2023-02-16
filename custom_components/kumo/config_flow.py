@@ -201,8 +201,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         data_schema = vol.Schema(
             {
-                vol.Required("connect_timeout", default=1.2): str,
-                vol.Required("response_timeout", default=8): str,
+                vol.Required("connect_timeout", default=1.2): vol.Coerce(float),
+                vol.Required("response_timeout", default=8): vol.Coerce(float),
             }
         )
 

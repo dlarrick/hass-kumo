@@ -13,7 +13,7 @@ def main():
     username = input("KumoCloud username:")
     password = getpass.getpass(prompt="KumoCloud password:")
 
-    url = "https://geo-c.kumocloud.com/login"
+    url = "https://app.kumocloud.com/login"
     headers = {
         "Accept": "application/json, text/plain, */*",
         "Accept-Encoding": "gzip, deflate, br",
