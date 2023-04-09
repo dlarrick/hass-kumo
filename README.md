@@ -49,6 +49,15 @@ In some cases, Kumo is unable to retrieve the indoor units' addresses from the K
 If you continue to have connection issues with your units, try using the Kumo Cloud app to force a refresh of your devices with KumoCloud. Quoting @rhasselbaum's [Gist](https://gist.github.com/rhasselbaum/2e528ca6efc0c8adc765c0117d2c9389):
 > So back into **Installer Settings**. I clicked on the unit there, and under **Advanced**, there is a **Refresh Setttings** option. Bingo! This resynchronizes the state of the device with Kumo Cloud, apparently. Clicked that, restarted HA again, and finally, it shows up!
 
+## Troubleshooting
+### WiFi
+The most common cause of flaky behavior is weak WiFi signal at the indoor unit. Try measuring WiFi strength (2.4 GHz only) with a phone app. Also try repositioning the Mitsubishi WiFi adapter within the unit, positioning it close to the plastic exterior rather than metal interior components.
+
+### API errors
+In early 2023 Mitsubishi appears to have made some change that makes the WiFi adapter less reliable. My educated guess is that it has a memory leak. See [Issue 105](https://github.com/dlarrick/hass-kumo/issues/105) in the hass-kumo repository for discussion.
+
+As a result of this issue, if you are seeing `serializer_error` or (especially) `__no_memory` errors consistently in your HA logs, it's likely that your indoor unit needs power-cycling. Unfortunately the easiest way is probably at the circuit breaker for the entire mini-split system.
+
 ## Home Assistant Entities and Control
 
 Each indoor unit appears as a separate [`climate`](https://www.home-assistant.io/integrations/climate/) entity in Home Assistant. Entity names are derived from the name you created for the unit in KumoCloud. For example, `climate.bedroom` or `climate.living_room`.
