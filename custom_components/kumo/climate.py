@@ -136,6 +136,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         self._target_temperature_high = None
         self._current_humidity = None
         self._hvac_mode = None
+        self._last_hvac_mode = None
         self._hvac_action = None
         self._fan_mode = None
         self._swing_mode = None
@@ -228,7 +229,10 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
             result = KUMO_STATE_TO_HA[mode]
         except KeyError:
             result = None
+        if self._hvac_mode is not None and self._hvac_mode is not HVAC_MODE_OFF:
+            self._last_hvac_mode = self._hvac_mode
         self._hvac_mode = result
+        _LOGGER.debug("[_update_hvac_mode] _last_hvac_mode %s; _hvac_mode: %s", self._last_hvac_mode, self._hvac_mode)
 
     @property
     def hvac_action(self):
@@ -425,7 +429,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
             "manufacturer": "Mitsubishi",
         }
 
-    def set_temperature(self, **kwargs):
+    def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
         _LOGGER.debug(
             "Kumo %s set temp: %s, current mode %s",
@@ -488,7 +492,19 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
                 "Kumo %s set %s temp response: %s", self._name, "cool", str(response)
             )
 
-    def set_hvac_mode(self, hvac_mode):
+    def async_turn_on(self) -> None:
+        """Turn on ac."""
+        _LOGGER.debug("[async_turn_on] _last_hvac_mode %s; _hvac_mode: %s",self._last_hvac_mode, self._hvac_mode)
+        if self._last_hvac_mode is not None and self._last_hvac_mode is not HVAC_MODE_OFF:
+            self.async_set_hvac_mode(self._last_hvac_mode)
+        """No-op when no previous mode set..."""
+
+    def async_turn_off(self) -> None:
+        _LOGGER.debug("[async_turn_off] _last_hvac_mode %s; _hvac_mode: %s", self._hvac_action, self._hvac_mode)
+        """Turn off ac."""
+        self.set_hvac_mode('off')
+
+    def async_set_hvac_mode(self, hvac_mode):
         """Set new target operation mode."""
         try:
             mode = HA_STATE_TO_KUMO[hvac_mode]
@@ -504,7 +520,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
             "Kumo %s set mode %s response: %s", self._name, hvac_mode, response
         )
 
-    def set_swing_mode(self, swing_mode):
+    def async_set_swing_mode(self, swing_mode):
         """Set new vane swing mode."""
         if not self.available:
             _LOGGER.warning("Kumo %s is not available", self._name)
@@ -513,7 +529,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         response = self._pykumo.set_vane_direction(swing_mode)
         _LOGGER.debug("Kumo %s set swing mode response: %s", self._name, response)
 
-    def set_fan_mode(self, fan_mode):
+    def async_set_fan_mode(self, fan_mode):
         """Set new fan speed mode."""
         if not self.available:
             _LOGGER.warning("Kumo %s is not available", self._name)
