@@ -44,7 +44,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     all_serials = await hass.async_add_executor_job(account.get_all_units)
     for serial in all_serials:
         coordinator = coordinators[serial]
-        
+
         entities.append(KumoCurrentHumidity(coordinator))
         _LOGGER.debug("Adding entity: current_humidity for %s", coordinator.get_device().get_name())
         entities.append(KumoCurrentTemperature(coordinator))
@@ -55,7 +55,6 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
         _LOGGER.debug("Adding entity: sensor_signal_strength for %s", coordinator.get_device().get_name())
         entities.append(KumoWifiSignal(coordinator))
         _LOGGER.debug("Adding entity: wifi_signal for %s", coordinator.get_device().get_name())
-        
 
     kumo_station_serials = await hass.async_add_executor_job(account.get_kumo_stations)
     for serial in kumo_station_serials:
