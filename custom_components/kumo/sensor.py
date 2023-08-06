@@ -15,7 +15,7 @@ except ImportError:
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS
+from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS, PERCENTAGE
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.typing import HomeAssistantType
 
@@ -44,8 +44,18 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     all_serials = await hass.async_add_executor_job(account.get_all_units)
     for serial in all_serials:
         coordinator = coordinators[serial]
+        
+        entities.append(KumoCurrentHumidity(coordinator))
+        _LOGGER.debug("Adding entity: current_humidity for %s", coordinator.get_device().get_name())
+        entities.append(KumoCurrentTemperature(coordinator))
+        _LOGGER.debug("Adding entity: current_temperature for %s", coordinator.get_device().get_name())
+        entities.append(KumoSensorBattery(coordinator))
+        _LOGGER.debug("Adding entity: sensor_battery for %s", coordinator.get_device().get_name())
+        entities.append(KumoSensorSignalStrength(coordinator))
+        _LOGGER.debug("Adding entity: sensor_signal_strength for %s", coordinator.get_device().get_name())
         entities.append(KumoWifiSignal(coordinator))
         _LOGGER.debug("Adding entity: wifi_signal for %s", coordinator.get_device().get_name())
+        
 
     kumo_station_serials = await hass.async_add_executor_job(account.get_kumo_stations)
     for serial in kumo_station_serials:
@@ -55,6 +65,135 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
 
     if entities:
         async_add_entities(entities, True)
+
+class KumoCurrentHumidity(CoordinatedKumoEntitty, SensorEntity):
+    """Representation of a Kumo's Unit's Current Humidity"""
+
+    def __init__(self, coordinator: KumoDataUpdateCoordinator):
+        """Initialize the kumo station."""
+        super().__init__(coordinator)
+        self._name = self._pykumo.get_name() + " Current Humidity"
+
+    @property
+    def unique_id(self):
+        """Return unique id"""
+        return f"{self._identifier}-current-humidity"
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement which this thermostat uses."""
+        return PERCENTAGE
+
+    @property
+    def native_value(self):
+        """Return the current humidity level."""
+        return self._pykumo.get_current_humidity()
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.HUMIDITY
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Disable entity by default."""
+        return False
+
+class KumoCurrentTemperature(CoordinatedKumoEntitty, SensorEntity):
+    """Representation of a Kumo's Unit's Current Temperature"""
+
+    def __init__(self, coordinator: KumoDataUpdateCoordinator):
+        """Initialize the kumo station."""
+        super().__init__(coordinator)
+        self._name = self._pykumo.get_name() + " Current Tempterature"
+
+    @property
+    def unique_id(self):
+        """Return unique id"""
+        return f"{self._identifier}-current-temperature"
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement which this thermostat uses."""
+        return TEMP_CELSIUS
+
+    @property
+    def native_value(self):
+        """Return the current temperature."""
+        return self._pykumo.get_current_temperature()
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Enable entity by default."""
+        return True
+
+class KumoSensorBattery(CoordinatedKumoEntitty, SensorEntity):
+    """Representation of a Kumo Sensor's Battery Level."""
+
+    def __init__(self, coordinator: KumoDataUpdateCoordinator):
+        """Initialize the kumo station."""
+        super().__init__(coordinator)
+        self._name = self._pykumo.get_name() + " Sensor Battery"
+
+    @property
+    def unique_id(self):
+        """Return unique id"""
+        return f"{self._identifier}-sensor-battery"
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement which this thermostat uses."""
+        return PERCENTAGE
+
+    @property
+    def native_value(self):
+        """Return the sensor's current battery level."""
+        return self._pykumo.get_sensor_battery()
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.BATTERY
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Disable entity by default."""
+        return False
+
+class KumoSensorSignalStrength(CoordinatedKumoEntitty, SensorEntity):
+    """Representation of a Kumo Sensor's Signal Strength."""
+
+    def __init__(self, coordinator: KumoDataUpdateCoordinator):
+        """Initialize the kumo station."""
+        super().__init__(coordinator)
+        self._name = self._pykumo.get_name() + " Sensor Signal Strength"
+
+    @property
+    def unique_id(self):
+        """Return unique id"""
+        return f"{self._identifier}-sensor-signal-strength"
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement which this thermostat uses."""
+        return SIGNAL_STRENGTH_DECIBELS
+
+    @property
+    def native_value(self):
+        """Return the sengor's signal strength in rssi."""
+        return self._pykumo.get_sensor_rssi()
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.SIGNAL_STRENGTH
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Disable entity by default."""
+        return False
+
 
 class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
     """Representation of a Kumo Station Outdoor Temperature Sensor."""
@@ -76,12 +215,18 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
 
     @property
     def native_value(self):
-        """Return the high dual setpoint temperature."""
+        """Return the unit's reported outdoor temperature."""
         return self._pykumo.get_outdoor_temperature()
 
     @property
     def device_class(self):
         return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Disable entity by default."""
+        return False
+
 
 class KumoWifiSignal(CoordinatedKumoEntitty, SensorEntity):
     """Representation of a Kumo's WiFi Signal Strength."""
@@ -114,4 +259,3 @@ class KumoWifiSignal(CoordinatedKumoEntitty, SensorEntity):
     def entity_registry_enabled_default(self) -> bool:
         """Disable entity by default."""
         return False
-
