@@ -130,6 +130,11 @@ class KumoCurrentTemperature(CoordinatedKumoEntitty, SensorEntity):
         return SensorDeviceClass.TEMPERATURE
 
     @property
+    def precision(self):
+        """Return the precision of the system."""
+        return PRECISION_TENTHS
+
+    @property
     def entity_registry_enabled_default(self) -> bool:
         """Enable entity by default."""
         return True
