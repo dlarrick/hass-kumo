@@ -15,7 +15,7 @@ except ImportError:
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS, PERCENTAGE
+from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS, PERCENTAGE, PRECISION_TENTHS
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.typing import HomeAssistantType
 
@@ -91,6 +91,11 @@ class KumoCurrentHumidity(CoordinatedKumoEntitty, SensorEntity):
     @property
     def device_class(self):
         return SensorDeviceClass.HUMIDITY
+
+    @property
+    def precision(self):
+        """Return the precision of the system."""
+        return PRECISION_TENTHS
 
     @property
     def entity_registry_enabled_default(self) -> bool:
@@ -220,6 +225,11 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
     @property
     def device_class(self):
         return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def precision(self):
+        """Return the precision of the system."""
+        return PRECISION_TENTHS
 
     @property
     def entity_registry_enabled_default(self) -> bool:

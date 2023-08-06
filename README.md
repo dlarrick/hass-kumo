@@ -93,7 +93,21 @@ Specific support and behavior can vary, depending on the capabilities of your in
 
 ## Home Assistant Sensors
 
-Useful information from indoor units is provided as attributes on the associated `climate` entity. It's easier to use these attributes if you convert them to sensors using [templates](https://community.home-assistant.io/t/using-attributes-in-lovelace/72672). For example, here's a simple sensor for the target temperature.
+Useful information from indoor units is provided as attributes on the associated `climate` entity. This data can be turned into sensors in one of two ways: sensors provided by the integration, or template sensors from the main entity's attributes.
+
+### Sensors
+By default a sensor for current temperature is enabled. It's possible to enable sensors for a few other values, if available:
+- WiFi RSSI signal strength
+- Current Humidity (provided by a linked PAC-USWHS003 or MHK2 device)
+- PAC sensor battery level
+- Sensor RSSI signal strength
+- Outdoor temperature (provided by Kumo Station)
+
+To enable these optional sensors, click on the Kumo tile in Settings -> Devices and Services, go into the Devices section, click on the indoor unit (or Kumo Station) and enable them under Sensors.
+
+### Template Sensors
+
+For additional attributes not covered above, or if you require more customization, you can convert attributes to sensors using [templates](https://community.home-assistant.io/t/using-attributes-in-lovelace/72672). For example, here's a simple sensor for the target temperature.
 
 ```yaml
 # Get attribute of climate state in form of sensor
