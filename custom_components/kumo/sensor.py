@@ -108,7 +108,7 @@ class KumoCurrentTemperature(CoordinatedKumoEntitty, SensorEntity):
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
         """Initialize the kumo station."""
         super().__init__(coordinator)
-        self._name = self._pykumo.get_name() + " Current Tempterature"
+        self._name = self._pykumo.get_name() + " Current Temperature"
 
     @property
     def unique_id(self):
