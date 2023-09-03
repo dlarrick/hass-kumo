@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-""" Fetch required info from KumoCloud and produce HomeAssistant configuration
-    section for the units found there
+""" Fetch required info from KumoCloud and produce HomeAssistant YAML
+    configuration section for the units found there
+
+    NOTE: This code is legacy, not used anymore since switching to the `pykumo`
+    library. The Kumo integration no longer supports YAML configuration.
+    It's retained because it has some small utility as an example.
 """
 
 import getpass
