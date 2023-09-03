@@ -105,6 +105,8 @@ By default a sensor for current temperature is enabled. It's possible to enable 
 
 To enable these optional sensors, click on the Kumo tile in Settings -> Devices and Services, go into the Devices section, click on the indoor unit (or Kumo Station) and enable them under Sensors.
 
+**Note** that you will need to restart HmomeAssistant after enabling a new sensor type, due to [Issue 120](https://github.com/dlarrick/hass-kumo/issues/120).
+
 ### Template Sensors
 
 For additional attributes not covered above, or if you require more customization, you can convert attributes to sensors using [templates](https://community.home-assistant.io/t/using-attributes-in-lovelace/72672). For example, here's a simple sensor for the target temperature.
