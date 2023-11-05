@@ -5,7 +5,7 @@
     "documentation": "https://github.com/dlarrick/hass-kumo",
     "dependencies": [],
     "codeowners": [ "@dlarrick" ],
-    "requirements": ["pykumo==0.3.7"],
-    "version": "0.3.8",
+    "requirements": ["pykumo==0.3.8"],
+    "version": "0.3.9",
     "homeassistant": "2021.12.0"
 }
