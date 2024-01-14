@@ -17,15 +17,15 @@ except ImportError:
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.climate.const import (
-    ATTR_HVAC_MODE, ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW,
-    CURRENT_HVAC_COOL, CURRENT_HVAC_DRY, CURRENT_HVAC_FAN, CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_IDLE, CURRENT_HVAC_OFF, HVAC_MODE_COOL, HVAC_MODE_DRY,
-    HVAC_MODE_FAN_ONLY, HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL, HVAC_MODE_OFF,
-    SUPPORT_FAN_MODE, SUPPORT_SWING_MODE, SUPPORT_TARGET_TEMPERATURE,
-    SUPPORT_TARGET_TEMPERATURE_RANGE)
+    ATTR_HVAC_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+    HVACAction,
+    HVACMode,
+    ClimateEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE,
-                                 TEMP_CELSIUS)
+from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.helpers.typing import HomeAssistantType
 
 from .const import KUMO_DATA, KUMO_DATA_COORDINATORS
@@ -60,36 +60,38 @@ KUMO_STATE_VENT = "vent"
 KUMO_STATE_OFF = "off"
 
 HA_STATE_TO_KUMO = {
-    HVAC_MODE_HEAT_COOL: KUMO_STATE_AUTO,
-    HVAC_MODE_COOL: KUMO_STATE_COOL,
-    HVAC_MODE_HEAT: KUMO_STATE_HEAT,
-    HVAC_MODE_DRY: KUMO_STATE_DRY,
-    HVAC_MODE_FAN_ONLY: KUMO_STATE_VENT,
-    HVAC_MODE_OFF: KUMO_STATE_OFF,
+    HVACMode.HEAT_COOL: KUMO_STATE_AUTO,
+    HVACMode.COOL: KUMO_STATE_COOL,
+    HVACMode.HEAT: KUMO_STATE_HEAT,
+    HVACMode.DRY: KUMO_STATE_DRY,
+    HVACMode.FAN_ONLY: KUMO_STATE_VENT,
+    HVACMode.OFF: KUMO_STATE_OFF,
 }
 KUMO_STATE_TO_HA = {
-    KUMO_STATE_AUTO: HVAC_MODE_HEAT_COOL,
-    KUMO_STATE_AUTO_COOL: HVAC_MODE_HEAT_COOL,
-    KUMO_STATE_AUTO_HEAT: HVAC_MODE_HEAT_COOL,
-    KUMO_STATE_COOL: HVAC_MODE_COOL,
-    KUMO_STATE_HEAT: HVAC_MODE_HEAT,
-    KUMO_STATE_DRY: HVAC_MODE_DRY,
-    KUMO_STATE_VENT: HVAC_MODE_FAN_ONLY,
-    KUMO_STATE_OFF: HVAC_MODE_OFF,
+    KUMO_STATE_AUTO: HVACMode.HEAT_COOL,
+    KUMO_STATE_AUTO_COOL: HVACMode.HEAT_COOL,
+    KUMO_STATE_AUTO_HEAT: HVACMode.HEAT_COOL,
+    KUMO_STATE_COOL: HVACMode.COOL,
+    KUMO_STATE_HEAT: HVACMode.HEAT,
+    KUMO_STATE_DRY: HVACMode.DRY,
+    KUMO_STATE_VENT: HVACMode.FAN_ONLY,
+    KUMO_STATE_OFF: HVACMode.OFF,
 }
 KUMO_STATE_TO_HA_ACTION = {
-    KUMO_STATE_AUTO: CURRENT_HVAC_IDLE,
-    KUMO_STATE_AUTO_COOL: CURRENT_HVAC_COOL,
-    KUMO_STATE_AUTO_HEAT: CURRENT_HVAC_HEAT,
-    KUMO_STATE_COOL: CURRENT_HVAC_COOL,
-    KUMO_STATE_HEAT: CURRENT_HVAC_HEAT,
-    KUMO_STATE_DRY: CURRENT_HVAC_DRY,
-    KUMO_STATE_VENT: CURRENT_HVAC_FAN,
-    KUMO_STATE_OFF: CURRENT_HVAC_OFF,
+    KUMO_STATE_AUTO: HVACAction.IDLE,
+    KUMO_STATE_AUTO_COOL: HVACAction.COOLING,
+    KUMO_STATE_AUTO_HEAT: HVACAction.HEATING,
+    KUMO_STATE_COOL: HVACAction.COOLING,
+    KUMO_STATE_HEAT: HVACAction.HEATING,
+    KUMO_STATE_DRY: HVACAction.DRYING,
+    KUMO_STATE_VENT: HVACAction.FAN,
+    KUMO_STATE_OFF: HVACAction.OFF,
 }
 
 
-async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistantType, entry: ConfigEntry, async_add_entities
+):
     """Set up the Kumo thermostats."""
     account = hass.data[DOMAIN][entry.entry_id][KUMO_DATA].get_account()
     coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
@@ -103,6 +105,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     if not entities:
         raise ConfigEntryNotReady("Kumo integration found no indoor units")
     async_add_entities(entities, True)
+
 
 class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
     """Representation of a Kumo Thermostat device."""
@@ -148,19 +151,21 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         self._runstate = None
         self._fan_modes = self._pykumo.get_fan_speeds()
         self._swing_modes = self._pykumo.get_vane_directions()
-        self._hvac_modes = [HVAC_MODE_OFF, HVAC_MODE_COOL]
-        self._supported_features = SUPPORT_TARGET_TEMPERATURE | SUPPORT_FAN_MODE
+        self._hvac_modes = [HVACMode.OFF, HVACMode.COOL]
+        self._supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+        )
         if self._pykumo.has_dry_mode():
-            self._hvac_modes.append(HVAC_MODE_DRY)
+            self._hvac_modes.append(HVACMode.DRY)
         if self._pykumo.has_heat_mode():
-            self._hvac_modes.append(HVAC_MODE_HEAT)
+            self._hvac_modes.append(HVACMode.HEAT)
         if self._pykumo.has_vent_mode():
-            self._hvac_modes.append(HVAC_MODE_FAN_ONLY)
+            self._hvac_modes.append(HVACMode.FAN_ONLY)
         if self._pykumo.has_auto_mode():
-            self._hvac_modes.append(HVAC_MODE_HEAT_COOL)
-            self._supported_features |= SUPPORT_TARGET_TEMPERATURE_RANGE
+            self._hvac_modes.append(HVACMode.HEAT_COOL)
+            self._supported_features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         if self._pykumo.has_vane_direction():
-            self._supported_features |= SUPPORT_SWING_MODE
+            self._supported_features |= ClimateEntityFeature.SWING_MODE
         for prop in KumoThermostat._update_properties:
             try:
                 setattr(self, f"_{prop}", None)
@@ -205,7 +210,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
     @property
     def temperature_unit(self):
         """Return the unit of measurement which this thermostat uses."""
-        return TEMP_CELSIUS
+        return UnitOfTemperature.CELSIUS
 
     @property
     def current_humidity(self):
@@ -239,7 +244,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         """Refresh cached hvac action."""
         standby = self._pykumo.get_standby()
         if standby:
-            result = CURRENT_HVAC_IDLE
+            result = HVACAction.IDLE
         else:
             mode = self._pykumo.get_mode()
             try:
@@ -299,9 +304,9 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         """Refresh the cached target temperature."""
         temp = None
         idumode = self.hvac_mode
-        if idumode == HVAC_MODE_HEAT:
+        if idumode == HVACMode.HEAT:
             temp = self._pykumo.get_heat_setpoint()
-        elif idumode == HVAC_MODE_COOL:
+        elif idumode == HVACMode.COOL:
             temp = self._pykumo.get_cool_setpoint()
         else:
             temp = None
@@ -316,7 +321,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         """Refresh the cached target cooling setpoint."""
         temp = None
         idumode = self.hvac_mode
-        if idumode == HVAC_MODE_HEAT_COOL:
+        if idumode == HVACMode.HEAT_COOL:
             temp = self._pykumo.get_cool_setpoint()
         else:
             temp = None
@@ -331,7 +336,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         """Refresh the cached target heating setpoint."""
         temp = None
         idumode = self.hvac_mode
-        if idumode == HVAC_MODE_HEAT_COOL:
+        if idumode == HVACMode.HEAT_COOL:
             temp = self._pykumo.get_heat_setpoint()
         else:
             temp = None
@@ -443,7 +448,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         proposed_mode = kwargs.get(ATTR_HVAC_MODE)
         target_mode = proposed_mode or current_mode
 
-        if target_mode not in [HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_HEAT]:
+        if target_mode not in [HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.HEAT]:
             _LOGGER.warning(
                 "Kumo %s not setting target temperature for mode %s",
                 self._name,
@@ -453,7 +458,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
 
         target = {}
         try:
-            if target_mode == HVAC_MODE_HEAT_COOL:
+            if target_mode == HVACMode.HEAT_COOL:
                 target["cool"] = kwargs.get(ATTR_TARGET_TEMP_HIGH)
                 target["heat"] = kwargs.get(ATTR_TARGET_TEMP_LOW)
                 if target["cool"] < target["heat"]:
@@ -461,9 +466,9 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
                         "Kumo %s heat_cool setpoints are inverted", self._name
                     )
                     target["cool"] = target["heat"]
-            elif target_mode == HVAC_MODE_COOL:
+            elif target_mode == HVACMode.COOL:
                 target["cool"] = kwargs.get(ATTR_TEMPERATURE)
-            elif target_mode == HVAC_MODE_HEAT:
+            elif target_mode == HVACMode.HEAT:
                 target["heat"] = kwargs.get(ATTR_TEMPERATURE)
         except KeyError as ke:
             _LOGGER.warning(

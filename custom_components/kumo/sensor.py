@@ -15,7 +15,7 @@ except ImportError:
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, TEMP_CELSIUS, PERCENTAGE, PRECISION_TENTHS
+from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, UnitOfTemperature, PERCENTAGE, PRECISION_TENTHS
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.typing import HomeAssistantType
 
@@ -118,7 +118,7 @@ class KumoCurrentTemperature(CoordinatedKumoEntitty, SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement which this thermostat uses."""
-        return TEMP_CELSIUS
+        return UnitOfTemperature.CELSIUS
 
     @property
     def native_value(self):
@@ -220,7 +220,7 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement which this thermostat uses."""
-        return TEMP_CELSIUS
+        return UnitOfTemperature.CELSIUS
 
     @property
     def native_value(self):
