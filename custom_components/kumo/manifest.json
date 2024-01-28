@@ -6,6 +6,6 @@
     "dependencies": [],
     "codeowners": [ "@dlarrick" ],
     "requirements": ["pykumo==0.3.8"],
-    "version": "0.3.9",
+    "version": "0.3.10",
     "homeassistant": "2021.12.0"
 }
