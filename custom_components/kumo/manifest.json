@@ -3,9 +3,12 @@
     "name": "Kumo",
     "config_flow": true,
     "documentation": "https://github.com/dlarrick/hass-kumo",
+    "issue_tracker": "https://github.com/dlarrick/hass-kumo/issues",
     "dependencies": [],
     "codeowners": [ "@dlarrick" ],
     "requirements": ["pykumo==0.3.8"],
     "version": "0.3.10",
-    "homeassistant": "2021.12.0"
+    "homeassistant": "2021.12.0",
+    "iot_class": "local_polling",
+    "integration_type": "hub"
 }

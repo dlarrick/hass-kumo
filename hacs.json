@@ -1,6 +1,5 @@
-{ "name": "Mitsubishi Kumo Cloud",
+{
+  "name": "Mitsubishi Kumo Cloud",
   "render_readme": true,
-  "domains": ["climate"],
-  "homeassistant": "0.96.0",
-  "iot_class": "local_poll"
+  "homeassistant": "2021.12.0"
 }
