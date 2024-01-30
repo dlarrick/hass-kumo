@@ -9,7 +9,7 @@ Mitubishi Kumo Cloud (Kumo for short) is a custom component for Home Assistant t
 - Supports reading and setting the mode (heat/cool/etc.), setpoint, fan speed, and vane swing.
 - Supports fully local control, except for initial setup. (See `prefer_cache` in Configuration for details.)
 - Supports displaying the Outdoor Temperature for Kumo Station.
-- Supports displaying Wi-Fi signal strenth (RSSI) of each unit (disabled by default).
+- Supports displaying Wi-Fi signal strength (RSSI) of each unit (disabled by default).
 
 ## Installation
 
@@ -26,9 +26,9 @@ We recommend using the HACS installation method, which makes future updates to K
 
 Configure Kumo using the Home Assistant user interface.
 
-1. In Home Assistant, go to Settings ➤ Devices & Services ➤ Integrations, and click **➕ Add Integration**. 
+1. In Home Assistant, go to Settings ➤ Devices & Services ➤ Integrations, and click **➕ Add Integration**.
 2. Search for "Kumo" and select the **Kumo** item.
-3. When prompted, enter your KumoCloud username (email address) and password. 
+3. When prompted, enter your KumoCloud username (email address) and password.
 4. You can also enable the `prefer_cache` setting in this dialog. See details below.
 5. Click **Submit** to enable the integration and begin device discovery.
 6. Once discovery is complete:
@@ -44,10 +44,10 @@ Once the Kumo integration is added, you'll have a card for it on the Integration
 
 Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at Home Assistant startup, if `prefer_cache` is False) from the Kumo Cloud web service. It is **strongly** recommended that you set a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
 
-In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings. 
+In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings.
 
 If you continue to have connection issues with your units, try using the Kumo Cloud app to force a refresh of your devices with KumoCloud. Quoting @rhasselbaum's [Gist](https://gist.github.com/rhasselbaum/2e528ca6efc0c8adc765c0117d2c9389):
-> So back into **Installer Settings**. I clicked on the unit there, and under **Advanced**, there is a **Refresh Setttings** option. Bingo! This resynchronizes the state of the device with Kumo Cloud, apparently. Clicked that, restarted HA again, and finally, it shows up!
+> So back into **Installer Settings**. I clicked on the unit there, and under **Advanced**, there is a **Refresh Settings** option. Bingo! This resynchronizes the state of the device with Kumo Cloud, apparently. Clicked that, restarted HA again, and finally, it shows up!
 
 ## Troubleshooting
 ### WiFi
@@ -144,7 +144,7 @@ This template was suggested in the community thread (see Support, below). It can
 
 ## Support
 
-For support, see the [Kumo integration thread](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508) on the Home Assistant community. (To skip early development discussions, start with [the official availability announcement](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508/128) in that thread.) 
+For support, see the [Kumo integration thread](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508) on the Home Assistant community. (To skip early development discussions, start with [the official availability announcement](https://community.home-assistant.io/t/mitsubishi-kumo-cloud-integration/121508/128) in that thread.)
 
 For bugs or feature improvements, feel free to create a GitHub issue or pull request.
 
