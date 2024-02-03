@@ -34,7 +34,7 @@
       },
       "timeout_settings": {
         "data": {
-          "connect_timeout": "Connection Timout",
+          "connect_timeout": "Connection Timeout",
           "response_timeout": "Response Timeout"
         }
       },

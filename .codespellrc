@@ -1,0 +1,3 @@
+[codespell]
+check-filenames =
+ignore-words-list = hass,incomfort
