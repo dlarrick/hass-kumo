@@ -7,7 +7,7 @@ import pykumo
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.core import HomeAssistant
 from homeassistant.util.json import load_json, save_json
 
 from .coordinator import KumoDataUpdateCoordinator
@@ -67,7 +67,7 @@ class KumoCloudSettings:
         """Retrieve raw JSON config from account."""
         return self._account.get_raw_json()
 
-async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Setup Kumo Entry"""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(entry.entry_id, {})
@@ -107,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     _LOGGER.warning("Could not load config from KumoCloud server or cache")
     return False
 
-async def async_kumo_setup(hass: HomeAssistantType, prefer_cache: bool, username: str, password: str) -> Optional[pykumo.KumoCloudAccount]:
+async def async_kumo_setup(hass: HomeAssistant, prefer_cache: bool, username: str, password: str) -> Optional[pykumo.KumoCloudAccount]:
     """Attempt to load data from cache or Kumo Cloud"""
     if prefer_cache:
         cached_json = await hass.async_add_executor_job(
@@ -130,7 +130,7 @@ async def async_kumo_setup(hass: HomeAssistantType, prefer_cache: bool, username
 
         return account
 
-async def async_unload_entry(hass: HomeAssistantType, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload Entry"""
 
     for platform in PLATFORMS:

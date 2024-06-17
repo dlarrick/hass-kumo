@@ -17,7 +17,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import SIGNAL_STRENGTH_DECIBELS, UnitOfTemperature, PERCENTAGE, PRECISION_TENTHS
 from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.core import HomeAssistant
 
 from . import KUMO_DATA
 
@@ -35,7 +35,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     }
 )
 
-async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     """Set up the Kumo thermostats."""
     account = hass.data[DOMAIN][entry.entry_id][KUMO_DATA].get_account()
     coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
