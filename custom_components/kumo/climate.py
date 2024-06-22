@@ -26,7 +26,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.core import HomeAssistant
 
 from .const import KUMO_DATA, KUMO_DATA_COORDINATORS
 
@@ -90,7 +90,7 @@ KUMO_STATE_TO_HA_ACTION = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistantType, entry: ConfigEntry, async_add_entities
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ):
     """Set up the Kumo thermostats."""
     account = hass.data[DOMAIN][entry.entry_id][KUMO_DATA].get_account()
