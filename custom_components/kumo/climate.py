@@ -8,7 +8,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .coordinator import KumoDataUpdateCoordinator
-from .entity import CoordinatedKumoEntitty
+from .entity import CoordinatedKumoEntity
 
 try:
     from homeassistant.components.climate import ClimateEntity
@@ -107,7 +107,7 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
+class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
     """Representation of a Kumo Thermostat device."""
 
     _update_properties = [

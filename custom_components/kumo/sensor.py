@@ -6,7 +6,7 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA
 
 from .const import DOMAIN, KUMO_DATA_COORDINATORS
 from .coordinator import KumoDataUpdateCoordinator
-from .entity import CoordinatedKumoEntitty
+from .entity import CoordinatedKumoEntity
 
 try:
     from homeassistant.components.sensor import SensorEntity
@@ -65,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     if entities:
         async_add_entities(entities, True)
 
-class KumoCurrentHumidity(CoordinatedKumoEntitty, SensorEntity):
+class KumoCurrentHumidity(CoordinatedKumoEntity, SensorEntity):
     """Representation of a Kumo's Unit's Current Humidity"""
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
@@ -102,7 +102,7 @@ class KumoCurrentHumidity(CoordinatedKumoEntitty, SensorEntity):
         """Disable entity by default."""
         return False
 
-class KumoCurrentTemperature(CoordinatedKumoEntitty, SensorEntity):
+class KumoCurrentTemperature(CoordinatedKumoEntity, SensorEntity):
     """Representation of a Kumo's Unit's Current Temperature"""
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
@@ -139,7 +139,7 @@ class KumoCurrentTemperature(CoordinatedKumoEntitty, SensorEntity):
         """Enable entity by default."""
         return True
 
-class KumoSensorBattery(CoordinatedKumoEntitty, SensorEntity):
+class KumoSensorBattery(CoordinatedKumoEntity, SensorEntity):
     """Representation of a Kumo Sensor's Battery Level."""
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
@@ -171,7 +171,7 @@ class KumoSensorBattery(CoordinatedKumoEntitty, SensorEntity):
         """Disable entity by default."""
         return False
 
-class KumoSensorSignalStrength(CoordinatedKumoEntitty, SensorEntity):
+class KumoSensorSignalStrength(CoordinatedKumoEntity, SensorEntity):
     """Representation of a Kumo Sensor's Signal Strength."""
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
@@ -204,7 +204,7 @@ class KumoSensorSignalStrength(CoordinatedKumoEntitty, SensorEntity):
         return False
 
 
-class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
+class KumoStationOutdoorTemperature(CoordinatedKumoEntity, SensorEntity):
     """Representation of a Kumo Station Outdoor Temperature Sensor."""
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
@@ -242,7 +242,7 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntitty, SensorEntity):
         return False
 
 
-class KumoWifiSignal(CoordinatedKumoEntitty, SensorEntity):
+class KumoWifiSignal(CoordinatedKumoEntity, SensorEntity):
     """Representation of a Kumo's WiFi Signal Strength."""
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
