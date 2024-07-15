@@ -128,7 +128,7 @@ class KumoThermostat(CoordinatedKumoEntitty, ClimateEntity):
         "runstate",
     ]
 
-    _enable_turn_on_off_backwards_compatibility = False
+    _enable_turn_on_off_backwards_compatibility = False # can be removed once 2024.12 is no longer supported
 
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
         """Initialize the thermostat."""
