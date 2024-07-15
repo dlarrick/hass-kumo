@@ -101,7 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         for platform in PLATFORMS:
             hass.async_create_task(
-                hass.config_entries.async_forward_entry_setup(entry, platform))
+                await hass.config_entries.async_forward_entry_setup(entry, platform))
         return True
 
     _LOGGER.warning("Could not load config from KumoCloud server or cache")
