@@ -86,8 +86,6 @@ Use the standard `climate` service calls to control or automate each unit. Avail
 - `climate.set_fan_mode`
 - `climate.set_hvac_mode`
 - `climate.set_swing_mode`
-- `climate.turn_on`
-- `climate.turn_off`
 
 Specific support and behavior can vary, depending on the capabilities of your indoor unit.
 
