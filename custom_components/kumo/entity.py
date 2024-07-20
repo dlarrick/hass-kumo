@@ -1,4 +1,4 @@
-"""Entities for The Internet Printing Protocol (IPP) integration."""
+"""Entities for the Kumo integration."""
 from __future__ import annotations
 
 from homeassistant.helpers.entity import DeviceInfo
@@ -8,7 +8,7 @@ from .const import DOMAIN
 from .coordinator import KumoDataUpdateCoordinator
 
 
-class CoordinatedKumoEntitty(CoordinatorEntity):
+class CoordinatedKumoEntity(CoordinatorEntity):
     """Defines a base Kumo entity."""
 
     def __init__(
@@ -23,7 +23,7 @@ class CoordinatedKumoEntitty(CoordinatorEntity):
 
     @property
     def device_info(self) -> DeviceInfo | None:
-        """Return device information about this IPP device."""
+        """Return information about the underlying device."""
         if self._identifier is None:
             return None
 
