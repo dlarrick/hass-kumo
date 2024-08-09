@@ -4,7 +4,8 @@ import logging
 import voluptuous as vol
 from homeassistant import config_entries, core, exceptions
 from homeassistant.core import callback
-from homeassistant.util.json import load_json, save_json
+from homeassistant.util.json import load_json
+from homeassistant.helpers.json import save_json
 from pykumo import KumoCloudAccount
 from requests.exceptions import ConnectionError
 
