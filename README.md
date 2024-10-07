@@ -44,7 +44,14 @@ Once the Kumo integration is added, you'll have a card for it on the Integration
 
 Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at Home Assistant startup, if `prefer_cache` is False) from the Kumo Cloud web service. It is **strongly** recommended that you set a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
 
-In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings.
+In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. Here's how to fill in that form:
+1. Each unit found will show you a MAC address and ask you for the IP Address. Write these down or copy them to a text file.
+1. Go into your local WiFi router admin panel (e.g. EERO app, if that's what you have) which lists each device, it's MAC address, and the IP address it has been assigned.
+1. Look up the device by MAC address and copy down the corresponding IP address. You can use the IPv4 format (e.g. 1.2.3.4)
+1. Put that IP address into the form in place of the text that is there.
+2. NOTE: On an EERO system, you need to enable `prefer_cache` and reserve the IP addresses for your units. In the EERO app go to `Network Settings / Advanced settings / Reservations and Port Forwarding / Add a reservation`. Then select the device and click save. If you changed the IP address, just restart that device and it’ll come back with the IP you reserved for it.
+
+It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings.
 
 If you continue to have connection issues with your units, try using the Kumo Cloud app to force a refresh of your devices with KumoCloud. Quoting @rhasselbaum's [Gist](https://gist.github.com/rhasselbaum/2e528ca6efc0c8adc765c0117d2c9389):
 > So back into **Installer Settings**. I clicked on the unit there, and under **Advanced**, there is a **Refresh Settings** option. Bingo! This resynchronizes the state of the device with Kumo Cloud, apparently. Clicked that, restarted HA again, and finally, it shows up!
