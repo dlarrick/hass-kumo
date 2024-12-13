@@ -155,7 +155,10 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._swing_modes = self._pykumo.get_vane_directions()
         self._hvac_modes = [HVACMode.OFF, HVACMode.COOL]
         self._supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+            ClimateEntityFeature.TARGET_TEMPERATURE |
+            ClimateEntityFeature.FAN_MODE |
+            ClimateEntityFeature.TURN_OFF |
+            ClimateEntityFeature.TURN_ON
         )
         if self._pykumo.has_dry_mode():
             self._hvac_modes.append(HVACMode.DRY)
