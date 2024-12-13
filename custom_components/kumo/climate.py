@@ -537,6 +537,6 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         In the future, make the default "on" mode configurable."""
         self.set_hvac_mode(HVACMode.COOL, caller="turn_on")
 
-    def turn_off(self, hvac_mode):
+    def turn_off(self):
         """Turn the climate off. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_off."""
         self.set_hvac_mode(HVACMode.OFF, caller="turn_off")
