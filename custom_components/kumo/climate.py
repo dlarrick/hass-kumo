@@ -155,8 +155,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE |
             ClimateEntityFeature.FAN_MODE |
-            ClimateEntityFeature.TURN_OFF |
-            ClimateEntityFeature.TURN_ON
+            ClimateEntityFeature.TURN_OFF
         )
         if self._pykumo.has_dry_mode():
             self._hvac_modes.append(HVACMode.DRY)
@@ -529,13 +528,6 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
         response = self._pykumo.set_fan_speed(fan_mode)
         _LOGGER.debug("Kumo %s set fan speed response: %s", self._name, response)
-
-    def turn_on(self) -> None:
-        """Turn the climate on. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_on.
-
-        For now, turn it on to HVACMode.COOL which always exists in self._hvac_modes.
-        In the future, make the default "on" mode configurable."""
-        self.set_hvac_mode(HVACMode.COOL, caller="turn_on")
 
     def turn_off(self):
         """Turn the climate off. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_off."""
