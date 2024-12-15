@@ -155,7 +155,9 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._swing_modes = self._pykumo.get_vane_directions()
         self._hvac_modes = [HVACMode.OFF, HVACMode.COOL]
         self._supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+            ClimateEntityFeature.TARGET_TEMPERATURE |
+            ClimateEntityFeature.FAN_MODE |
+            ClimateEntityFeature.TURN_OFF
         )
         if self._pykumo.has_dry_mode():
             self._hvac_modes.append(HVACMode.DRY)
@@ -495,7 +497,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
                 "Kumo %s set %s temp response: %s", self._name, "cool", str(response)
             )
 
-    def set_hvac_mode(self, hvac_mode):
+    def set_hvac_mode(self, hvac_mode, caller="set_hvac_mode"):
         """Set new target operation mode."""
         try:
             mode = HA_STATE_TO_KUMO[hvac_mode]
@@ -508,7 +510,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
         response = self._pykumo.set_mode(mode)
         _LOGGER.debug(
-            "Kumo %s set mode %s response: %s", self._name, hvac_mode, response
+            "Kumo %s set mode %s (via `%s`) response: %s", self._name, hvac_mode, caller, response
         )
 
     def set_swing_mode(self, swing_mode):
@@ -528,3 +530,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
         response = self._pykumo.set_fan_speed(fan_mode)
         _LOGGER.debug("Kumo %s set fan speed response: %s", self._name, response)
+
+    def turn_off(self):
+        """Turn the climate off. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_off."""
+        self.set_hvac_mode(HVACMode.OFF, caller="turn_off")
