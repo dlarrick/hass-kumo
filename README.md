@@ -44,12 +44,23 @@ Once the Kumo integration is added, you'll have a card for it on the Integration
 
 Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at Home Assistant startup, if `prefer_cache` is False) from the Kumo Cloud web service. It is **strongly** recommended that you set a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
 
-In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings.
+In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. To obtain these addresses, you will need to find the MAC address of each indoor unit; it should be on a sticker on the outside of the WiFi interface.
+
+Given each MAC address, go into your WiFi router's admin interface and write down the IP address assigned to each one. It should be in dotted-quad notation e.g. `192.168.1.141`. **Note:** Depending on your router, this is likely to be where you can permanently reserve an IP address, which is **highly recommended**
+
+For example, for an EERO system, go to `Network Settings / Advanced settings / Reservations and Port Forwarding / Add a reservation`. Then select the device and click save. If you changed the IP address, just restart that indoor unit and it’ll come back with the IP you reserved for it.
+
+Back in Home Assistant, it will show you the MAC address and ask you for the corresponding IP address. Use what you wrote down to fill in this info.
+
+It's also possible to edit the IP address of existing units through the UI using the **Configure** link on Kumo's tile in the Integrations section of Settings.
 
 If you continue to have connection issues with your units, try using the Kumo Cloud app to force a refresh of your devices with KumoCloud. Quoting @rhasselbaum's [Gist](https://gist.github.com/rhasselbaum/2e528ca6efc0c8adc765c0117d2c9389):
 > So back into **Installer Settings**. I clicked on the unit there, and under **Advanced**, there is a **Refresh Settings** option. Bingo! This resynchronizes the state of the device with Kumo Cloud, apparently. Clicked that, restarted HA again, and finally, it shows up!
 
 ## Troubleshooting
+### Unable to set up / indoor units not found
+This integration retrieves critical information (such as IP address and local security keys) from the Kumo Cloud service run by Mitsubishi. This service seems to take a while (even up to several days) to update after network changes or on a fresh install. If you're impatient or the integration is still not setting up after several days, try the suggestions under the "IP Addresses" section above.
+
 ### WiFi
 The most common cause of flaky behavior is weak WiFi signal at the indoor unit. Try measuring WiFi strength (2.4 GHz only) with a phone app. Also try repositioning the Mitsubishi WiFi adapter within the unit, positioning it close to the plastic exterior rather than metal interior components.
 
@@ -159,6 +170,7 @@ For bugs or feature improvements, feel free to create a GitHub issue or pull req
 - Debugging for different types of indoor units.
 - Explore if other local APIs are available to provide additional useful information (whether a unit is calling, etc.).
 - Code cleanup. Code reviews welcome!
+- Implement `climate.turn_on` action (service).
 - Possible enhancement: allow setup and control of schedules and operating modes on the indoor unit itself.
 - Possibly work toward inclusion as an official Home Assistant integration.
 
