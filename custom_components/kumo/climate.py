@@ -53,20 +53,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     }
 )
 
-SCHEDULE_SETTINGS_SCHEMA = vol.Schema({
-    "mode": cv.string,
-    "vaneDir": cv.string,
-    "fanSpeed": cv.string,
-}, extra=vol.ALLOW_EXTRA)
-
-SCHEDULE_EVENT_SCHEMA = {
-    "active": cv.boolean,
-    "inUse": cv.boolean,
-    "day": cv.string,
-    "time": cv.string,
-    "settings": SCHEDULE_SETTINGS_SCHEMA,
-}
-
 KUMO_STATE_AUTO = "auto"
 KUMO_STATE_AUTO_COOL = "autoCool"
 KUMO_STATE_AUTO_HEAT = "autoHeat"
