@@ -15,7 +15,7 @@ try:
 except ImportError:
     from homeassistant.components.climate import ClimateDevice as ClimateEntity
 
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
@@ -26,7 +26,10 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.util.json import JsonObjectType
+
+from pykumo.schedule import ScheduleEvent
 
 from .const import KUMO_DATA, KUMO_DATA_COORDINATORS
 
@@ -49,6 +52,20 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_CONFIG): cv.string,
     }
 )
+
+SCHEDULE_SETTINGS_SCHEMA = vol.Schema({
+    "mode": cv.string,
+    "vaneDir": cv.string,
+    "fanSpeed": cv.string,
+}, extra=vol.ALLOW_EXTRA)
+
+SCHEDULE_EVENT_SCHEMA = {
+    "active": cv.boolean,
+    "inUse": cv.boolean,
+    "day": cv.string,
+    "time": cv.string,
+    "settings": SCHEDULE_SETTINGS_SCHEMA,
+}
 
 KUMO_STATE_AUTO = "auto"
 KUMO_STATE_AUTO_COOL = "autoCool"
@@ -105,6 +122,24 @@ async def async_setup_entry(
     if not entities:
         raise ConfigEntryNotReady("Kumo integration found no indoor units")
     async_add_entities(entities, True)
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        name="get_hvac_schedule",
+        schema=None,
+        func="get_hvac_schedule",
+        supports_response=SupportsResponse.ONLY,
+    )
+    platform.async_register_entity_service(
+        name="set_hvac_schedule",
+        schema={
+            vol.Required("entity_id"): str,
+            # TODO: This could be a lot tighter...
+            vol.Required("schedule"): vol.Schema({}, extra=vol.ALLOW_EXTRA),
+        },
+        func="set_hvac_schedule",
+        supports_response=SupportsResponse.ONLY,
+    )
 
 
 class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
@@ -534,3 +569,17 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
     def turn_off(self):
         """Turn the climate off. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_off."""
         self.set_hvac_mode(HVACMode.OFF, caller="turn_off")
+
+    def get_hvac_schedule(self) -> JsonObjectType:
+        """Fetch the schedule for this entity as a JSON-encodable dictionary."""
+        unit_schedule = self._pykumo.get_unit_schedule()
+        all_events = unit_schedule.to_json_dict(slots=unit_schedule.keys())
+        return all_events.get("events", {})
+
+    def set_hvac_schedule(self, schedule: JsonObjectType):
+        """Set the schedule for this entity from a JSON-encodable dictionary."""
+        unit_schedule = self._pykumo.get_unit_schedule()
+        for slot, schedule_event_json in schedule.items():
+            schedule_event = ScheduleEvent.from_json(schedule_event_json)
+            unit_schedule[slot] = schedule_event
+        unit_schedule.push()
