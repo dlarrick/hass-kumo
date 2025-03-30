@@ -47,5 +47,21 @@
         }
       }
     }
+  },
+  "services": {
+    "get_hvac_schedule": {
+      "name": "Get HVAC schedule (advanced)",
+      "description": "Fetch the HVAC schedule for this unit. This is intended for advanced usage in scripts only."
+    },
+    "set_hvac_schedule": {
+      "name": "Set HVAC schedule (advanced)",
+      "description": "Set the HVAC schedule for this unit. This is intended for advanced usage in scripts only.",
+      "fields": {
+        "schedule": {
+          "name": "Schedule",
+          "description": "Schedule (in a JSON structure) to set."
+        }
+      }
+    }
   }
 }

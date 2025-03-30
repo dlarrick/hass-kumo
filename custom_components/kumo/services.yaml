@@ -1,0 +1,16 @@
+get_hvac_schedule:
+  description: Get HVAC schedule
+  target:
+    entity:
+      domain: "climate"
+      integration: "kumo"
+
+set_hvac_schedule:
+  description: Set HVAC schedule
+  target:
+    entity:
+      domain: "climate"
+      integration: "kumo"
+  fields:
+    schedule:
+      required: true
