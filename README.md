@@ -2,30 +2,48 @@
 
 [![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo) [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
+# **Current Status PLEASE READ**
+
+The release of the Mitsubishi Comfort app and its Kumo v3 server-side API has broken the ability for some users to retrieve necessary information from the Kumo server APIs. New users, or anyone whose indoor units change in any way (add/replace hardware, change IP address assignment, change Mitsubishi password) will be unable to use the hass-kumo integration. Suggested options:
+
+1. *It's working fine! Do I need to change anything?* No, not as of this writing. I (author/maintainer of hass-kumo and pykumo) am in this situation. But **DON'T CHANGE** your IP address assignment or reset your adapters, or reset your Mitsubishi password. In fact I recommend staying out of the Comfort app entirely.
+2. *Why did this happen? I need reliable local control!* Yeah, you're not wrong. Those who want to avoid the cloud entirely for their HVAC might want to check out the [ESP32](https://github.com/dlarrick/hass-kumo/issues/190) route instead of continuing to use the Kumo adapters. **Note** if someone has a better link to a canonical ESP32 writeup, drop me a note and I'll update this link. TBH if & when my units stop working, and we haven't fixed hass-kumo, this is what I'll do.
+3. *Is there a way for HomeAssistant to use the cloud service from instead?* Yes! [J. Justin Wilson](https://github.com/jjustinwilson/comfort_HA) has stepped up and made a Home Assistant integration that uses the new cloud API directly. This is a brand new integration so there are sure to be issues, and of course cloud control will never be as snappy as local. But folks are successfully using it. Kudos!
+4. *I like the current software! What can we do?* Yeah, me too. I have two remaining thoughts on possible ways to restore local control, and also I think long term it would be nice to retrofit cloud control into pykumo as a fallback. I've made 3 tickets over there, and PRs or discussion are more than welcome.
+   - Implement cloud-based control in pykumo via V3 API: https://github.com/dlarrick/pykumo/issues/56
+   - Investigate if the missing unit password can be derived from things we know: https://github.com/dlarrick/pykumo/issues/57
+   - Investigate if the missing unit password is indeed available from the v3 API and we just haven't found it: https://github.com/dlarrick/pykumo/issues/58
+  
+----------------------
+   
 > [!CAUTION]
 > ## New Mitsubish Comfort app breakage
 > 
 > **TL;DR: Mitsubishi has changed their cloud components. DO NOT uninstall/reinstall or reconfigure the Kumo integration or you will lose access.**
 >
-> Adapting to these changes is a goal, but PyKumo / Hass-Kumo is a side / weekend project for the primary maintainer. Assistance greatly appreciated! Leave a comment in [#189](https://github.com/dlarrick/hass-kumo/issues/189) if you're able & willing to help.
+> Adapting to these changes is a goal, but PyKumo / Hass-Kumo is a side / weekend project for the primary maintainer. Assistance greatly appreciated! Leave a comment in one of the 3 PyKumo tickets listed below if you're able & willing to help. Many thanks to the folks who have stepped up thus far.
 > 
 > ### Summary
-> - Mitsubishi rolled out a new Kumo app and corresponding server-side cloud infrastructure. It appears there's a new firmware version for the indoor unit WiFi adapters as well. This rollout did not go well for them.
-> - The new server-side cloud infrastructure has broken pykumo's ability to retrieve the information needed to achieve access to the indoor units' local API that PyKumo depends on.
-> - The rollout de-stabilized the whole Kumo ecosystem, causing interruption of even local access for indoor units that encountered errors talking to the cloud. (This issue may have existed previously but was made worse by the upgrade.)
-> - Early indications are that the local indoor unit API has not changed substantially and still works OK for those who waited out the storm.
+> - Mitsubishi rolled out a new Comfort app (replacing Kumo Cloud) and corresponding server-side cloud infrastructure (Kumo V3 API). It appears there's a new firmware version for the indoor unit WiFi adapters as well.
+> - The old Kumo server-side infrastructure still exists, at least for now, but it appears its database is not being updated
+> - The new server-side cloud infrastructure appears to not present all the information needed to achieve access to the indoor units' local API that PyKumo depends on.
+> - The local indoor unit API has not changed substantially and still works OK for some users whose local configuration has not changed.
+> - Anyone who loses their hass-kumo local configuration, or adds indoor units, or whose indoor units' IP address changes, will be unable to access those units via pykumo/hass-kumo.
+> - It's possible the old solution could stop working at any time, especially if Mitsubishi intends to fully abandon the use of local control.
+>   
+> Also see the long discussion in [189](https://github.com/dlarrick/hass-kumo/issues/189)
 > 
 > ### Unknowns
-> - Does switching to the new Mitsubishi iOS and/or Android app cause the indoor units to lose compatibility with PyKumo / Hass-Kumo? (I think the answer is "no" but have not confirmed).
-> - Can we continue to get access tokens etc. from the new Kumo Cloud service?
-> - Are there minor changes to the local API that we need to accommodate?
+> - Can we get access to the last piece of missing information (unit password) in some way?
 > - Are there changes to the local API that we can take advantage of?
 >
 > ### Plan
-> - Verify if PyKumo's cloud account/login is fully broken, or just needs adjustment
-> - Snoop/capture a login session from the new app (likely needs standard iOS / Android man-in-the-middle traffic capture unless there's a new web app)
-> - Use this to restore cloud account/login to PyKumo
-> - Snoop/capture local communication from the new app to an indoor unit and compare to what PyKumo does
+> - See the 3 PyKumo tickets:
+>  - Implement cloud-based control in pykumo via V3 API: https://github.com/dlarrick/pykumo/issues/56
+>  - Investigate if the missing unit password can be derived from things we know: https://github.com/dlarrick/pykumo/issues/57
+>  - Investigate if the missing unit password is indeed available from the v3 API and we just haven't found it: https://github.com/dlarrick/pykumo/issues/58
+
+--------------------------------------
 
 ## Home Assistant component
 Mitubishi Kumo Cloud (Kumo for short) is a custom component for Home Assistant that allows you to control Mitsubishi mini-split units that are connected to the Mitsubishi KumoCloud service.
