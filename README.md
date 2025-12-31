@@ -20,16 +20,16 @@ The release of the Mitsubishi Comfort app and its Kumo v3 server-side API has br
    - Implement cloud-based control in pykumo via V3 API: https://github.com/dlarrick/pykumo/issues/56
    - Investigate if the missing unit password can be derived from things we know: https://github.com/dlarrick/pykumo/issues/57
    - Investigate if the missing unit password is indeed available from the v3 API and we just haven't found it: https://github.com/dlarrick/pykumo/issues/58
-  
+
 ----------------------
-   
+
 > [!CAUTION]
 > ## New Mitsubish Comfort app breakage
-> 
+>
 > **TL;DR: Mitsubishi has changed their cloud components. DO NOT uninstall/reinstall or reconfigure the Kumo integration or you will lose access.**
 >
 > Adapting to these changes is a goal, but PyKumo / Hass-Kumo is a side / weekend project for the primary maintainer. Assistance greatly appreciated! Leave a comment in one of the 3 PyKumo tickets listed below if you're able & willing to help. Many thanks to the folks who have stepped up thus far.
-> 
+>
 > ### Summary
 > - Mitsubishi rolled out a new Comfort app (replacing Kumo Cloud) and corresponding server-side cloud infrastructure (Kumo V3 API). It appears there's a new firmware version for the indoor unit WiFi adapters as well.
 > - The old Kumo server-side infrastructure still exists, at least for now, but it appears its database is not being updated
@@ -37,9 +37,9 @@ The release of the Mitsubishi Comfort app and its Kumo v3 server-side API has br
 > - The local indoor unit API has not changed substantially and still works OK for some users whose local configuration has not changed.
 > - Anyone who loses their hass-kumo local configuration, or adds indoor units, or whose indoor units' IP address changes, will be unable to access those units via pykumo/hass-kumo.
 > - It's possible the old solution could stop working at any time, especially if Mitsubishi intends to fully abandon the use of local control.
->   
+>
 > Also see the long discussion in [189](https://github.com/dlarrick/hass-kumo/issues/189)
-> 
+>
 > ### Unknowns
 > - Can we get access to the last piece of missing information (unit password) in some way?
 > - Are there changes to the local API that we can take advantage of?
