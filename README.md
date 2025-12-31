@@ -2,7 +2,14 @@
 
 [![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo) [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
+
 # **Current Status PLEASE READ**
+
+## **Quick Update (December 31, 2025)**
+
+[EnumC](https://github.com/EnumC) has discovered the missing unit password field in a WebSocket response. See discussion under [#58](https://github.com/dlarrick/pykumo/issues/58). We're not out of the woods yet, but this is promising.
+
+## Breakage announcement (June 6, 2025)
 
 The release of the Mitsubishi Comfort app and its Kumo v3 server-side API has broken the ability for some users to retrieve necessary information from the Kumo server APIs. New users, or anyone whose indoor units change in any way (add/replace hardware, change IP address assignment, change Mitsubishi password) will be unable to use the hass-kumo integration. Suggested options:
 
