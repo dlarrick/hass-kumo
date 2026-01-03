@@ -148,16 +148,18 @@ Use the standard `climate` service calls to control or automate each unit. Avail
 - `climate.set_fan_mode`
 - `climate.set_hvac_mode`
 - `climate.set_swing_mode`
+- `climate.turn_on`
 - `climate.turn_off`
 
 Specific support and behavior can vary, depending on the capabilities of your indoor unit.
+When `climate.turn_on` is called, the integration restores the last active HVAC mode for that unit using the `Last HVAC Mode` sensor.
 
 ## Home Assistant Sensors
 
 Useful information from indoor units is provided as attributes on the associated `climate` entity. This data can be turned into sensors in one of two ways: sensors provided by the integration, or template sensors from the main entity's attributes.
 
 ### Sensors
-By default a sensor for current temperature is enabled. It's possible to enable sensors for a few other values, if available:
+By default sensors for current temperature and last HVAC mode are enabled. It's possible to enable sensors for a few other values, if available:
 - WiFi RSSI signal strength
 - Current Humidity (provided by a linked PAC-USWHS003 or MHK2 device)
 - PAC sensor battery level
@@ -221,7 +223,6 @@ For bugs or feature improvements, feel free to create a GitHub issue or pull req
 - Debugging for different types of indoor units.
 - Explore if other local APIs are available to provide additional useful information (whether a unit is calling, etc.).
 - Code cleanup. Code reviews welcome!
-- Implement `climate.turn_on` action (service).
 - Possible enhancement: allow setup and control of schedules and operating modes on the indoor unit itself.
 - Possibly work toward inclusion as an official Home Assistant integration.
 

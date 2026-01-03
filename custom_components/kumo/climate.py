@@ -6,9 +6,10 @@ import voluptuous as vol
 from homeassistant.components.climate import PLATFORM_SCHEMA
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import DOMAIN
+from .const import DOMAIN, KUMO_DATA, KUMO_DATA_COORDINATORS
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
+from .last_hvac_mode import get_last_hvac_mode, set_last_hvac_mode_value
 
 try:
     from homeassistant.components.climate import ClimateEntity
@@ -27,8 +28,6 @@ from homeassistant.components.climate.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-
-from .const import KUMO_DATA, KUMO_DATA_COORDINATORS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,8 +127,6 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         "runstate",
     ]
 
-    _enable_turn_on_off_backwards_compatibility = False # can be removed once 2024.12 is no longer supported
-
     def __init__(self, coordinator: KumoDataUpdateCoordinator):
         """Initialize the thermostat."""
 
@@ -157,7 +154,8 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE |
             ClimateEntityFeature.FAN_MODE |
-            ClimateEntityFeature.TURN_OFF
+            ClimateEntityFeature.TURN_OFF |
+            ClimateEntityFeature.TURN_ON
         )
         if self._pykumo.has_dry_mode():
             self._hvac_modes.append(HVACMode.DRY)
@@ -238,6 +236,26 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         except KeyError:
             result = None
         self._hvac_mode = result
+        if result is not None:
+            self._store_last_hvac_mode(result, caller="_update_hvac_mode")
+
+    def _get_cached_last_hvac_mode(self):
+        """Return the cached last active hvac mode, if any."""
+        if not self.hass or self._identifier is None:
+            return None
+        return get_last_hvac_mode(self.hass, self._identifier, self._hvac_modes)
+
+    def _store_last_hvac_mode(self, hvac_mode, caller):
+        """Persist last active hvac mode for turn_on."""
+        if hvac_mode in (None, HVACMode.OFF) or not self.hass or self._identifier is None:
+            return
+        set_last_hvac_mode_value(self.hass, self._identifier, hvac_mode.value)
+        _LOGGER.debug(
+            "Kumo %s saved last hvac mode %s (via `%s`)",
+            self._name,
+            hvac_mode,
+            caller,
+        )
 
     @property
     def hvac_action(self):
@@ -512,6 +530,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         _LOGGER.debug(
             "Kumo %s set mode %s (via `%s`) response: %s", self._name, hvac_mode, caller, response
         )
+        self._store_last_hvac_mode(hvac_mode, caller=caller)
 
     def set_swing_mode(self, swing_mode):
         """Set new vane swing mode."""
@@ -534,3 +553,16 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
     def turn_off(self):
         """Turn the climate off. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_off."""
         self.set_hvac_mode(HVACMode.OFF, caller="turn_off")
+
+    def turn_on(self):
+        """Turn the climate on. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_on."""
+        target_mode = self._get_cached_last_hvac_mode()
+        if target_mode is None:
+            for mode in self._hvac_modes:
+                if mode != HVACMode.OFF:
+                    target_mode = mode
+                    break
+        if target_mode is None:
+            _LOGGER.warning("Kumo %s has no valid hvac mode to turn on", self._name)
+            return
+        self.set_hvac_mode(target_mode, caller="turn_on")
