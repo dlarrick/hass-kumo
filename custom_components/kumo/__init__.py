@@ -12,6 +12,7 @@ from homeassistant.util.json import load_json
 from homeassistant.helpers.json import save_json
 
 from .coordinator import KumoDataUpdateCoordinator
+from .config_flow import DHCP_DISCOVERED_KEY
 from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_PREFER_CACHE,
@@ -77,7 +78,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     prefer_cache = entry.data.get(CONF_PREFER_CACHE)
 
     # Try V3 API first (Comfort app API), fall back to V2 if it fails
-    account = await async_kumo_setup_v3(hass, username, password)
+    candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
+    account = await async_kumo_setup_v3(hass, username, password, candidate_ips)
     if not account:
         _LOGGER.info("V3 setup failed, falling back to V2 API")
         account = await async_kumo_setup_v2(hass, prefer_cache, username, password)
@@ -108,7 +110,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.warning("Could not load config from KumoCloud (V3 or V2)")
     return False
 
-async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str) -> Optional[pykumo.KumoCloudAccount]:
+async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str, candidate_ips: dict = None) -> Optional[pykumo.KumoCloudAccount]:
     """Attempt setup using V3 API (Comfort app).
 
     Loads any cached kumo_dict first so device addresses are preserved.
@@ -121,7 +123,9 @@ async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str)
     else:
         account = pykumo.KumoCloudAccount(username, password)
 
-    setup_success = await hass.async_add_executor_job(account.try_setup_v3_only)
+    setup_success = await hass.async_add_executor_job(
+        account.try_setup_v3_only, candidate_ips or {}
+    )
 
     if setup_success:
         await hass.async_add_executor_job(

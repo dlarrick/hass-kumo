@@ -4,6 +4,10 @@ import os
 
 import voluptuous as vol
 from homeassistant import config_entries, core, exceptions
+try:
+    from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+except ImportError:
+    from homeassistant.components.dhcp import DhcpServiceInfo
 from homeassistant.core import callback
 from homeassistant.util.json import load_json
 from homeassistant.helpers.json import save_json
@@ -17,6 +21,9 @@ _LOGGER = logging.getLogger(__name__)
 EDIT_KEY = "edit_selection"
 EDIT_TIMEOUT = "Timeouts"
 EDIT_UNITS = "Unit Settings"
+
+
+DHCP_DISCOVERED_KEY = f"{DOMAIN}_dhcp_discovered"
 
 
 class PlaceholderAccount:
@@ -91,10 +98,15 @@ async def validate_input(hass: core.HomeAssistant, data):
 
     Tries V3 API first, then falls back to V2 API.
     """
+    # Collect DHCP-discovered IPs
+    candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
+
     # Try V3 first
     account = KumoCloudAccount(data["username"], data["password"])
     try:
-        result = await hass.async_add_executor_job(account.try_setup_v3_only)
+        result = await hass.async_add_executor_job(
+            account.try_setup_v3_only, candidate_ips
+        )
     except ConnectionError:
         result = False
 
@@ -121,6 +133,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
+    async def async_step_dhcp(self, discovery_info: DhcpServiceInfo):
+        """Handle discovery of a Kumo adapter via DHCP."""
+        _LOGGER.info(
+            "Discovered Kumo adapter via DHCP: %s (%s)",
+            discovery_info.ip, discovery_info.macaddress,
+        )
+        # Store the MAC->IP mapping for later use during setup
+        discovered = self.hass.data.setdefault(DHCP_DISCOVERED_KEY, {})
+        discovered[discovery_info.macaddress] = discovery_info.ip
+
+        # All Kumo adapters belong to a single integration entry keyed by
+        # domain. If already configured, just absorb the discovery silently.
+        await self.async_set_unique_id(DOMAIN)
+        self._abort_if_unique_id_configured()
+
+        # Prompt the user to set up the integration
+        return await self.async_step_user()
+
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         data_schema = {
@@ -133,12 +163,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, user_input)
 
+                # Set unique ID so DHCP discoveries abort once configured
+                await self.async_set_unique_id(DOMAIN)
+                self._abort_if_unique_id_configured()
+
                 # Set up account (V3-first, V2-fallback)
+                candidate_ips = self.hass.data.get(DHCP_DISCOVERED_KEY, {})
                 account = KumoCloudAccount(
                     user_input["username"], user_input["password"]
                 )
                 setup_ok = await self.hass.async_add_executor_job(
-                    account.try_setup_v3_only
+                    account.try_setup_v3_only, candidate_ips
                 )
                 if not setup_ok:
                     _LOGGER.info("V3 setup failed in config flow; trying V2")

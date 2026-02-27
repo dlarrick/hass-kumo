@@ -10,5 +10,9 @@
     "version": "0.4.0",
     "homeassistant": "2024.1.0",
     "iot_class": "local_polling",
-    "integration_type": "hub"
+    "integration_type": "hub",
+    "dhcp": [
+        { "macaddress": "24CD8D*" },
+        { "macaddress": "7087A7*" }
+    ]
 }
