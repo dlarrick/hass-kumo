@@ -7,6 +7,7 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA
 from .const import DOMAIN, KUMO_DATA_COORDINATORS
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
+from .temperature import c_to_f
 
 try:
     from homeassistant.components.sensor import SensorEntity
@@ -111,6 +112,11 @@ class KumoCurrentTemperature(CoordinatedKumoEntity, SensorEntity):
         self._name = self._pykumo.get_name() + " Current Temperature"
 
     @property
+    def _use_fahrenheit(self):
+        """Return True if the user's HA config is set to Fahrenheit."""
+        return self.hass.config.units.temperature_unit == UnitOfTemperature.FAHRENHEIT
+
+    @property
     def unique_id(self):
         """Return unique id"""
         return f"{self._identifier}-current-temperature"
@@ -118,12 +124,17 @@ class KumoCurrentTemperature(CoordinatedKumoEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement which this thermostat uses."""
+        if self._use_fahrenheit:
+            return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
     @property
     def native_value(self):
         """Return the current temperature."""
-        return self._pykumo.get_current_temperature()
+        temp = self._pykumo.get_current_temperature()
+        if self._use_fahrenheit:
+            temp = c_to_f(temp)
+        return temp
 
     @property
     def device_class(self):
@@ -213,6 +224,11 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntity, SensorEntity):
         self._name = self._pykumo.get_name() + " Outdoor Temperature"
 
     @property
+    def _use_fahrenheit(self):
+        """Return True if the user's HA config is set to Fahrenheit."""
+        return self.hass.config.units.temperature_unit == UnitOfTemperature.FAHRENHEIT
+
+    @property
     def unique_id(self):
         """Return unique id"""
         return f"{self._identifier}-outdoor-temperature"
@@ -220,12 +236,17 @@ class KumoStationOutdoorTemperature(CoordinatedKumoEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement which this thermostat uses."""
+        if self._use_fahrenheit:
+            return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
     @property
     def native_value(self):
         """Return the unit's reported outdoor temperature."""
-        return self._pykumo.get_outdoor_temperature()
+        temp = self._pykumo.get_outdoor_temperature()
+        if self._use_fahrenheit:
+            temp = c_to_f(temp)
+        return temp
 
     @property
     def device_class(self):
