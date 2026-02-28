@@ -14,16 +14,13 @@ from homeassistant.helpers.json import save_json
 from pykumo import KumoCloudAccount
 from requests.exceptions import ConnectionError
 
-from .const import DOMAIN, KUMO_CONFIG_CACHE
+from .const import DHCP_DISCOVERED_KEY, DOMAIN, KUMO_CONFIG_CACHE
 
 DEFAULT_PREFER_CACHE = False
 _LOGGER = logging.getLogger(__name__)
 EDIT_KEY = "edit_selection"
 EDIT_TIMEOUT = "Timeouts"
 EDIT_UNITS = "Unit Settings"
-
-
-DHCP_DISCOVERED_KEY = f"{DOMAIN}_dhcp_discovered"
 
 
 class PlaceholderAccount:
@@ -94,9 +91,10 @@ def _merge_cache_addresses(kumo_cache, cached_json):
 # ── Validation ──────────────────────────────────────────────
 
 async def validate_input(hass: core.HomeAssistant, data):
-    """Validate the user input allows us to connect.
+    """Validate the user input and return an authenticated account.
 
     Tries V3 API first, then falls back to V2 API.
+    Returns {"title": ..., "account": KumoCloudAccount}.
     """
     # Collect DHCP-discovered IPs
     candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
@@ -122,7 +120,7 @@ async def validate_input(hass: core.HomeAssistant, data):
     if not result:
         raise InvalidAuth
 
-    return {"title": data["username"]}
+    return {"title": data["username"], "account": account}
 
 
 # ── Config Flow ─────────────────────────────────────────────
@@ -160,31 +158,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         errors = {}
         if user_input is not None:
-            try:
-                info = await validate_input(self.hass, user_input)
-
-                # Set unique ID so DHCP discoveries abort once configured
+            # Set unique ID early so we abort before any network I/O.
+            # Skip if already set (e.g. when entered via async_step_dhcp).
+            if not self.unique_id:
                 await self.async_set_unique_id(DOMAIN)
                 self._abort_if_unique_id_configured()
 
-                # Set up account (V3-first, V2-fallback)
-                candidate_ips = self.hass.data.get(DHCP_DISCOVERED_KEY, {})
-                account = KumoCloudAccount(
-                    user_input["username"], user_input["password"]
-                )
-                setup_ok = await self.hass.async_add_executor_job(
-                    account.try_setup_v3_only, candidate_ips
-                )
-                if not setup_ok:
-                    _LOGGER.info("V3 setup failed in config flow; trying V2")
-                    account = KumoCloudAccount(
-                        user_input["username"], user_input["password"]
-                    )
-                    setup_ok = await self.hass.async_add_executor_job(
-                        account.try_setup
-                    )
-                if not setup_ok:
-                    raise InvalidAuth
+            try:
+                info = await validate_input(self.hass, user_input)
+                account = info["account"]
 
                 self.kumo_cache = await self.hass.async_add_executor_job(
                     account.get_raw_json
@@ -192,15 +174,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.user_account_setup = user_input
                 self.title = info["title"]
 
-                # Merge addresses from existing cache if prefer_cache is set
-                if user_input.get("prefer_cache"):
-                    cache_path = self.hass.config.path(KUMO_CONFIG_CACHE)
-                    if os.path.exists(cache_path):
-                        cached_json = await self.hass.async_add_executor_job(
-                            load_json, cache_path
-                        )
-                        if cached_json and _merge_cache_addresses(self.kumo_cache, cached_json):
-                            _LOGGER.info("Merged IP addresses from existing cache")
+                # Merge cached addresses so manually-configured IPs aren't lost
+                cache_path = self.hass.config.path(KUMO_CONFIG_CACHE)
+                if os.path.exists(cache_path):
+                    cached_json = await self.hass.async_add_executor_job(
+                        load_json, cache_path
+                    )
+                    if cached_json and _merge_cache_addresses(self.kumo_cache, cached_json):
+                        _LOGGER.info("Merged IP addresses from existing cache")
 
                 # Build unit list
                 self.units = []

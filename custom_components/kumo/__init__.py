@@ -12,11 +12,11 @@ from homeassistant.util.json import load_json
 from homeassistant.helpers.json import save_json
 
 from .coordinator import KumoDataUpdateCoordinator
-from .config_flow import DHCP_DISCOVERED_KEY
 from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_PREFER_CACHE,
     CONF_RESPONSE_TIMEOUT,
+    DHCP_DISCOVERED_KEY,
     DOMAIN,
     KUMO_CONFIG_CACHE,
     KUMO_DATA,
@@ -123,9 +123,13 @@ async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str,
     else:
         account = pykumo.KumoCloudAccount(username, password)
 
-    setup_success = await hass.async_add_executor_job(
-        account.try_setup_v3_only, candidate_ips or {}
-    )
+    try:
+        setup_success = await hass.async_add_executor_job(
+            account.try_setup_v3_only, candidate_ips or {}
+        )
+    except (ConnectionError, OSError) as err:
+        _LOGGER.warning("V3 setup failed due to network error, will fall back to V2: %s", err)
+        return None
 
     if setup_success:
         await hass.async_add_executor_job(
