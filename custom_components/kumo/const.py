@@ -15,6 +15,8 @@ CONF_CONNECT_TIMEOUT = "connect_timeout"
 CONF_RESPONSE_TIMEOUT = "response_timeout"
 MAX_AVAILABILITY_TRIES = 3 # How many times we will attempt to update from a kumo before marking it unavailable
 
+DHCP_DISCOVERED_KEY = f"{DOMAIN}_dhcp_discovered"
+
 PLATFORMS: Final = [Platform.CLIMATE, Platform.SENSOR]
 
 SCAN_INTERVAL = timedelta(seconds=60)

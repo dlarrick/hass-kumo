@@ -6,9 +6,13 @@
     "issue_tracker": "https://github.com/dlarrick/hass-kumo/issues",
     "dependencies": [],
     "codeowners": [ "@dlarrick" ],
-    "requirements": ["pykumo==0.3.9"],
-    "version": "0.3.15",
+    "requirements": ["pykumo==0.4.0"],
+    "version": "0.4.0",
     "homeassistant": "2024.1.0",
     "iot_class": "local_polling",
-    "integration_type": "hub"
+    "integration_type": "hub",
+    "dhcp": [
+        { "macaddress": "24CD8D*" },
+        { "macaddress": "7087A7*" }
+    ]
 }
