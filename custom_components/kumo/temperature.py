@@ -26,20 +26,22 @@ C_TO_F: dict[float, int] = {
 }
 
 
-def c_to_f(celsius: float) -> float:
+def c_to_f(celsius: "float|None") -> "float|None":
     """Convert Celsius to Fahrenheit using Mitsubishi lookup, with standard fallback."""
     if celsius is None:
         return None
+    # Home Assistant Celsius numbers are always multiples of 0.5
     result = C_TO_F.get(celsius)
     if result is not None:
         return result
     return round(celsius * 9 / 5 + 32)
 
 
-def f_to_c(fahrenheit: float) -> float:
+def f_to_c(fahrenheit: "float|None") -> "float|None":
     """Convert Fahrenheit to Celsius using Mitsubishi lookup, with fallback to nearest 0.5C."""
     if fahrenheit is None:
         return None
+    # Home Assistant Fahrenheit values are always whole numbers (though represented as float)
     result = F_TO_C.get(int(fahrenheit))
     if result is not None:
         return result
