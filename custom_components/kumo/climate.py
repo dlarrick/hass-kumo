@@ -9,6 +9,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from .const import DOMAIN
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
+from .temperature import c_to_f, f_to_c
 
 try:
     from homeassistant.components.climate import ClimateEntity
@@ -212,9 +213,23 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         return self._supported_features
 
     @property
+    def _use_fahrenheit(self):
+        """Return True if the user's HA config is set to Fahrenheit."""
+        return self.hass.config.units.temperature_unit == UnitOfTemperature.FAHRENHEIT
+
+    @property
     def temperature_unit(self):
         """Return the unit of measurement which this thermostat uses."""
+        if self._use_fahrenheit:
+            return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
+
+    @property
+    def target_temperature_step(self):
+        """Return the temperature step size."""
+        if self._use_fahrenheit:
+            return 1.0
+        return 0.5
 
     @property
     def current_humidity(self):
@@ -297,7 +312,10 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
     def _update_current_temperature(self):
         """Refresh cached current temperature."""
-        self._current_temperature = self._pykumo.get_current_temperature()
+        temp = self._pykumo.get_current_temperature()
+        if self._use_fahrenheit:
+            temp = c_to_f(temp)
+        self._current_temperature = temp
 
     @property
     def target_temperature(self):
@@ -314,6 +332,8 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             temp = self._pykumo.get_cool_setpoint()
         else:
             temp = None
+        if self._use_fahrenheit:
+            temp = c_to_f(temp)
         self._target_temperature = temp
 
     @property
@@ -329,6 +349,8 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             temp = self._pykumo.get_cool_setpoint()
         else:
             temp = None
+        if self._use_fahrenheit:
+            temp = c_to_f(temp)
         self._target_temperature_high = temp
 
     @property
@@ -344,6 +366,8 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             temp = self._pykumo.get_heat_setpoint()
         else:
             temp = None
+        if self._use_fahrenheit:
+            temp = c_to_f(temp)
         self._target_temperature_low = temp
 
     @property
@@ -486,6 +510,12 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         if current_mode != target_mode:
             self.set_hvac_mode(target_mode)
 
+        if self._use_fahrenheit:
+            if "cool" in target and target["cool"] is not None:
+                target["cool"] = f_to_c(target["cool"])
+            if "heat" in target and target["heat"] is not None:
+                target["heat"] = f_to_c(target["heat"])
+
         if "cool" in target:
             response = self._pykumo.set_cool_setpoint(target["cool"])
             _LOGGER.debug(
@@ -494,7 +524,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         if "heat" in target:
             response = self._pykumo.set_heat_setpoint(target["heat"])
             _LOGGER.debug(
-                "Kumo %s set %s temp response: %s", self._name, "cool", str(response)
+                "Kumo %s set %s temp response: %s", self._name, "heat", str(response)
             )
 
     def set_hvac_mode(self, hvac_mode, caller="set_hvac_mode"):
