@@ -17,6 +17,7 @@ except ImportError:
     from homeassistant.components.climate import ClimateDevice as ClimateEntity
 
 import homeassistant.helpers.config_validation as cv
+import homeassistant.helpers.entity_platform as entity_platform
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
@@ -27,7 +28,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 
 from .const import KUMO_DATA, KUMO_DATA_COORDINATORS
 
@@ -106,6 +107,28 @@ async def async_setup_entry(
     if not entities:
         raise ConfigEntryNotReady("Kumo integration found no indoor units")
     async_add_entities(entities, True)
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        "get_schedule",
+        {},
+        "async_get_schedule",
+        supports_response=SupportsResponse.ONLY,
+    )
+    platform.async_register_entity_service(
+        "set_schedule_enabled",
+        {
+            vol.Required("enabled"): cv.boolean,
+        },
+        "async_set_schedule_enabled",
+    )
+    platform.async_register_entity_service(
+        "set_schedule",
+        {
+            vol.Required("schedule"): vol.Schema({}, extra=vol.ALLOW_EXTRA),
+        },
+        "async_set_schedule",
+    )
 
 
 class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
@@ -560,6 +583,45 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
         response = self._pykumo.set_fan_speed(fan_mode)
         _LOGGER.debug("Kumo %s set fan speed response: %s", self._name, response)
+
+    async def async_get_schedule(self):
+        """Return the unit's schedule as a JSON response."""
+        schedule = self._pykumo.get_unit_schedule()
+        if schedule is None:
+            return {"error": "Schedule not available for this unit"}
+        await self.hass.async_add_executor_job(schedule.fetch)
+        return {"schedule": schedule.to_json_dict()}
+
+    async def async_set_schedule_enabled(self, enabled: bool):
+        """Enable or disable all schedule slots on the unit."""
+        schedule = self._pykumo.get_unit_schedule()
+        if schedule is None:
+            _LOGGER.warning("Kumo %s: Schedule not available", self._name)
+            return
+        await self.hass.async_add_executor_job(schedule.fetch)
+        for slot in schedule:
+            schedule[slot].active = enabled
+        await self.hass.async_add_executor_job(schedule.push)
+        _LOGGER.info(
+            "Kumo %s: Schedule %s",
+            self._name,
+            "enabled" if enabled else "disabled",
+        )
+
+    async def async_set_schedule(self, schedule: dict):
+        """Set the unit's schedule from a JSON structure."""
+        unit_schedule = self._pykumo.get_unit_schedule()
+        if unit_schedule is None:
+            _LOGGER.warning("Kumo %s: Schedule not available", self._name)
+            return
+        await self.hass.async_add_executor_job(unit_schedule.fetch)
+        events = schedule.get("events", {})
+        for slot, event_data in events.items():
+            if slot in unit_schedule:
+                from pykumo.schedule import ScheduleEvent
+                unit_schedule[slot] = ScheduleEvent.from_json(event_data)
+        await self.hass.async_add_executor_job(unit_schedule.push)
+        _LOGGER.info("Kumo %s: Schedule updated", self._name)
 
     def turn_off(self):
         """Turn the climate off. This implements https://www.home-assistant.io/integrations/climate/#action-climateturn_off."""

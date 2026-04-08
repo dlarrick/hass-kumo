@@ -1,0 +1,37 @@
+get_schedule:
+  name: Get HVAC Schedule
+  description: Retrieve the current schedule from the Kumo unit.
+  target:
+    entity:
+      integration: kumo
+      domain: climate
+
+set_schedule_enabled:
+  name: Enable/Disable Schedule
+  description: Enable or disable all schedule slots on the Kumo unit.
+  target:
+    entity:
+      integration: kumo
+      domain: climate
+  fields:
+    enabled:
+      name: Enabled
+      description: Whether to enable (true) or disable (false) the schedule.
+      required: true
+      selector:
+        boolean:
+
+set_schedule:
+  name: Set HVAC Schedule
+  description: Set the schedule on the Kumo unit from a JSON structure. Advanced use only.
+  target:
+    entity:
+      integration: kumo
+      domain: climate
+  fields:
+    schedule:
+      name: Schedule
+      description: Schedule data in the Kumo JSON format.
+      required: true
+      selector:
+        object:
