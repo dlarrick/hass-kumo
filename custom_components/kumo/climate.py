@@ -221,6 +221,17 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             if not self.available:
                 # Get out early if it's failing
                 break
+        # The adapter's autoModePrevention flag can incorrectly suppress
+        # auto mode even when the unit supports it. Check the unit profile's
+        # auto setpoints as a reliable indicator of actual capability.
+        if HVACMode.HEAT_COOL not in self._hvac_modes:
+            profile = getattr(self._pykumo, '_profile', {})
+            max_sp = profile.get('maximumSetPoints', {})
+            if 'auto' in max_sp:
+                self._hvac_modes.append(HVACMode.HEAT_COOL)
+                self._supported_features |= (
+                    ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+                )
 
     def _update_property(self, prop):
         """Call to refresh the value of a property -- may block on I/O."""
