@@ -6,9 +6,9 @@ get_schedule:
       integration: kumo
       domain: climate
 
-set_schedule_enabled:
-  name: Enable/Disable Schedule
-  description: Enable or disable all schedule slots on the Kumo unit.
+set_schedules_enabled:
+  name: Enable/Disable Schedules
+  description: Enable or disable schedule slots on the Kumo unit. Affects all slots by default, or specific slots if provided.
   target:
     entity:
       integration: kumo
@@ -16,10 +16,16 @@ set_schedule_enabled:
   fields:
     enabled:
       name: Enabled
-      description: Whether to enable (true) or disable (false) the schedule.
+      description: Whether to enable (true) or disable (false) the schedule slots.
       required: true
       selector:
         boolean:
+    slots:
+      name: Slots
+      description: Optional list of slot numbers to target (e.g. ["1", "3", "5"]). If omitted, all slots are affected.
+      required: false
+      selector:
+        object:
 
 set_schedule:
   name: Set HVAC Schedule

@@ -116,11 +116,14 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
     platform.async_register_entity_service(
-        "set_schedule_enabled",
+        "set_schedules_enabled",
         {
             vol.Required("enabled"): cv.boolean,
+            vol.Optional("slots"): vol.All(
+                cv.ensure_list, [cv.string]
+            ),
         },
-        "async_set_schedule_enabled",
+        "async_set_schedules_enabled",
     )
     platform.async_register_entity_service(
         "set_schedule",
@@ -592,20 +595,30 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         await self.hass.async_add_executor_job(schedule.fetch)
         return {"schedule": schedule.to_json_dict()}
 
-    async def async_set_schedule_enabled(self, enabled: bool):
-        """Enable or disable all schedule slots on the unit."""
+    async def async_set_schedules_enabled(self, enabled: bool, slots: list[str] | None = None):
+        """Enable or disable schedule slots on the unit.
+
+        If slots is provided, only those slots are affected.
+        If omitted, all slots are affected.
+        """
         schedule = self._pykumo.get_unit_schedule()
         if schedule is None:
             _LOGGER.warning("Kumo %s: Schedule not available", self._name)
             return
         await self.hass.async_add_executor_job(schedule.fetch)
-        for slot in schedule:
-            schedule[slot].active = enabled
+        target_slots = slots if slots is not None else list(schedule)
+        for slot in target_slots:
+            if slot in schedule:
+                schedule[slot].active = enabled
+            else:
+                _LOGGER.warning("Kumo %s: Slot %s not found", self._name, slot)
         await self.hass.async_add_executor_job(schedule.push)
+        scope = f"slots {target_slots}" if slots else "all slots"
         _LOGGER.info(
-            "Kumo %s: Schedule %s",
+            "Kumo %s: Schedule %s for %s",
             self._name,
             "enabled" if enabled else "disabled",
+            scope,
         )
 
     async def async_set_schedule(self, schedule: dict):
