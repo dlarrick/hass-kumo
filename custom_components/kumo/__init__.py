@@ -99,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             entry.options.get(CONF_RESPONSE_TIMEOUT, "8")
         )
         timeouts = (connect_timeout, response_timeout)
-        pykumos = await hass.async_add_executor_job(account.make_pykumos, timeouts, True)
+        pykumos = await hass.async_add_executor_job(account.make_pykumos, timeouts, True, True)
         for device in pykumos.values():
             if device.get_serial() not in coordinators:
                 coordinators[device.get_serial()] = KumoDataUpdateCoordinator(hass, device)
