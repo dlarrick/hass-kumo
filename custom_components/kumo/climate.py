@@ -4,7 +4,7 @@ import pprint
 
 import voluptuous as vol
 from homeassistant.components.climate import PLATFORM_SCHEMA
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 
 from .const import DOMAIN
 from .coordinator import KumoDataUpdateCoordinator
@@ -591,7 +591,9 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         """Return the unit's schedule as a JSON response."""
         schedule = self._pykumo.get_unit_schedule()
         if schedule is None:
-            return {"error": "Schedule not available for this unit"}
+            raise HomeAssistantError(
+                f"Schedule not available for {self._name}"
+            )
         await self.hass.async_add_executor_job(schedule.fetch)
         return {"schedule": schedule.to_json_dict()}
 
@@ -603,8 +605,9 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         """
         schedule = self._pykumo.get_unit_schedule()
         if schedule is None:
-            _LOGGER.warning("Kumo %s: Schedule not available", self._name)
-            return
+            raise HomeAssistantError(
+                f"Schedule not available for {self._name}"
+            )
         await self.hass.async_add_executor_job(schedule.fetch)
         target_slots = slots if slots is not None else list(schedule)
         for slot in target_slots:
@@ -613,7 +616,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             else:
                 _LOGGER.warning("Kumo %s: Slot %s not found", self._name, slot)
         await self.hass.async_add_executor_job(schedule.push)
-        scope = f"slots {target_slots}" if slots else "all slots"
+        scope = f"slots {target_slots}" if slots is not None else "all slots"
         _LOGGER.info(
             "Kumo %s: Schedule %s for %s",
             self._name,
@@ -623,15 +626,17 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
     async def async_set_schedule(self, schedule: dict):
         """Set the unit's schedule from a JSON structure."""
+        from pykumo.schedule import ScheduleEvent
+
         unit_schedule = self._pykumo.get_unit_schedule()
         if unit_schedule is None:
-            _LOGGER.warning("Kumo %s: Schedule not available", self._name)
-            return
+            raise HomeAssistantError(
+                f"Schedule not available for {self._name}"
+            )
         await self.hass.async_add_executor_job(unit_schedule.fetch)
         events = schedule.get("events", {})
         for slot, event_data in events.items():
             if slot in unit_schedule:
-                from pykumo.schedule import ScheduleEvent
                 unit_schedule[slot] = ScheduleEvent.from_json(event_data)
         await self.hass.async_add_executor_job(unit_schedule.push)
         _LOGGER.info("Kumo %s: Schedule updated", self._name)
