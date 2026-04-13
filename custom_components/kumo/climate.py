@@ -601,7 +601,8 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         """Enable or disable schedule slots on the unit.
 
         If slots is provided, only those slots are affected.
-        If omitted, all slots are affected.
+        If omitted, only in-use slots are affected to avoid activating
+        empty schedule entries.
         """
         schedule = self._pykumo.get_unit_schedule()
         if schedule is None:
@@ -609,14 +610,20 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
                 f"Schedule not available for {self._name}"
             )
         await self.hass.async_add_executor_job(schedule.fetch)
-        target_slots = slots if slots is not None else list(schedule)
+        if slots is not None:
+            target_slots = slots
+        else:
+            target_slots = [
+                slot for slot in schedule
+                if schedule[slot].in_use
+            ]
         for slot in target_slots:
             if slot in schedule:
                 schedule[slot].active = enabled
             else:
                 _LOGGER.warning("Kumo %s: Slot %s not found", self._name, slot)
         await self.hass.async_add_executor_job(schedule.push)
-        scope = f"slots {target_slots}" if slots is not None else "all slots"
+        scope = f"slots {target_slots}" if slots is not None else "all in-use slots"
         _LOGGER.info(
             "Kumo %s: Schedule %s for %s",
             self._name,
