@@ -13,6 +13,7 @@
     "integration_type": "hub",
     "dhcp": [
         { "macaddress": "24CD8D*" },
+        { "macaddress": "388D3D*" },
         { "macaddress": "7087A7*" }
     ]
 }
