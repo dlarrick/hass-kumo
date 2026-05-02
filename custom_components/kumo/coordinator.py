@@ -4,6 +4,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator,
                                                       UpdateFailed)
@@ -24,9 +25,11 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         device: PyKumoBase,
+        config_entry: ConfigEntry | None = None,
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific Kumo device."""
         self.device = device
+        self._config_entry = config_entry
         self._available = False
         self._unavailable_count = 0
         self._additional_update_methods = []

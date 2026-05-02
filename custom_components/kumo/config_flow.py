@@ -14,7 +14,15 @@ from homeassistant.helpers.json import save_json
 from pykumo import KumoCloudAccount
 from requests.exceptions import ConnectionError
 
-from .const import DHCP_DISCOVERED_KEY, DOMAIN, KUMO_CONFIG_CACHE
+from .const import (
+    CONF_CONNECT_TIMEOUT,
+    CONF_REFRESH_INTERVAL,
+    CONF_RESPONSE_TIMEOUT,
+    DEFAULT_REFRESH_INTERVAL,
+    DHCP_DISCOVERED_KEY,
+    DOMAIN,
+    KUMO_CONFIG_CACHE,
+)
 
 DEFAULT_PREFER_CACHE = False
 _LOGGER = logging.getLogger(__name__)
@@ -287,10 +295,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        current = self._config_entry.options
         data_schema = vol.Schema(
             {
-                vol.Required("connect_timeout", default=1.2): vol.Coerce(float),
-                vol.Required("response_timeout", default=8): vol.Coerce(float),
+                vol.Required(
+                    CONF_CONNECT_TIMEOUT,
+                    default=float(current.get(CONF_CONNECT_TIMEOUT, 1.2)),
+                ): vol.Coerce(float),
+                vol.Required(
+                    CONF_RESPONSE_TIMEOUT,
+                    default=float(current.get(CONF_RESPONSE_TIMEOUT, 8)),
+                ): vol.Coerce(float),
+                vol.Required(
+                    CONF_REFRESH_INTERVAL,
+                    default=float(current.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL)),
+                ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=30.0)),
             }
         )
 
