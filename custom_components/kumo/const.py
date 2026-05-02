@@ -13,10 +13,12 @@ KUMO_CONFIG_CACHE = "kumo_cache.json"
 CONF_PREFER_CACHE = "prefer_cache"
 CONF_CONNECT_TIMEOUT = "connect_timeout"
 CONF_RESPONSE_TIMEOUT = "response_timeout"
+CONF_SCAN_INTERVAL = "scan_interval"
+DEFAULT_SCAN_INTERVAL = 60  # seconds
 MAX_AVAILABILITY_TRIES = 3 # How many times we will attempt to update from a kumo before marking it unavailable
 
 DHCP_DISCOVERED_KEY = f"{DOMAIN}_dhcp_discovered"
 
 PLATFORMS: Final = [Platform.CLIMATE, Platform.SENSOR]
 
-SCAN_INTERVAL = timedelta(seconds=60)
+SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL)

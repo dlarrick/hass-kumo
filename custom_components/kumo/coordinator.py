@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 from typing import TypeVar
 
 from homeassistant.core import HomeAssistant
@@ -24,6 +25,7 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         device: PyKumoBase,
+        update_interval: timedelta | None = None,
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific Kumo device."""
         self.device = device
@@ -34,7 +36,7 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"kumo_{device.get_serial()}",
-            update_interval=SCAN_INTERVAL,
+            update_interval=update_interval if update_interval is not None else SCAN_INTERVAL,
         )
 
     def get_device(self) -> PyKumoBase:
