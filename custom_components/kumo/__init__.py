@@ -1,5 +1,6 @@
 """Support for Mitsubishi KumoCloud devices."""
 import logging
+from datetime import timedelta
 from typing import Optional
 
 import homeassistant.helpers.config_validation as cv
@@ -16,6 +17,8 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_PREFER_CACHE,
     CONF_RESPONSE_TIMEOUT,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
     DHCP_DISCOVERED_KEY,
     DOMAIN,
     KUMO_CONFIG_CACHE,
@@ -99,10 +102,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             entry.options.get(CONF_RESPONSE_TIMEOUT, "8")
         )
         timeouts = (connect_timeout, response_timeout)
+        scan_interval_secs = float(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        update_interval = timedelta(seconds=scan_interval_secs)
         pykumos = await hass.async_add_executor_job(account.make_pykumos, timeouts, True)
         for device in pykumos.values():
             if device.get_serial() not in coordinators:
-                coordinators[device.get_serial()] = KumoDataUpdateCoordinator(hass, device)
+                coordinators[device.get_serial()] = KumoDataUpdateCoordinator(
+                    hass, device, update_interval=update_interval
+                )
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
