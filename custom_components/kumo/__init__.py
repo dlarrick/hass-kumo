@@ -102,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         pykumos = await hass.async_add_executor_job(account.make_pykumos, timeouts, True)
         for device in pykumos.values():
             if device.get_serial() not in coordinators:
-                coordinators[device.get_serial()] = KumoDataUpdateCoordinator(hass, device)
+                coordinators[device.get_serial()] = KumoDataUpdateCoordinator(hass, device, config_entry=entry)
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
