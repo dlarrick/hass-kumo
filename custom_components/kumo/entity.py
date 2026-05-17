@@ -34,11 +34,6 @@ class CoordinatedKumoEntity(CoordinatorEntity):
         )
 
     @property
-    def should_poll(self):
-        """Return the polling state."""
-        return True
-
-    @property
     def available(self):
         """Return whether Home Assistant is able to read the state and control the underlying device."""
         return self._coordinator.get_available()
