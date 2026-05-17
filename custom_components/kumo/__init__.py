@@ -166,9 +166,13 @@ async def async_kumo_setup_v2(hass: HomeAssistant, prefer_cache: bool, username:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload Entry"""
 
+    all_ok = True
     for platform in PLATFORMS:
-        all_ok = True
         unload_ok = await hass.config_entries.async_forward_entry_unload(entry, platform)
         if not unload_ok:
             all_ok = False
+
+    if all_ok:
+        hass.data[DOMAIN][entry.entry_id].pop(KUMO_DATA_COORDINATORS, None)
+
     return all_ok
