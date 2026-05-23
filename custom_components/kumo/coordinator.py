@@ -2,14 +2,16 @@
 
 import logging
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 from typing import TypeVar
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator,
                                                       UpdateFailed)
 from pykumo import PyKumoBase
 
-from .const import SCAN_INTERVAL
+from .const import CONF_POST_COMMAND_REFRESH_DELAY, DEFAULT_POST_COMMAND_REFRESH_DELAY, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 MAX_AVAILABILITY_TRIES = 3
@@ -24,9 +26,12 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         device: PyKumoBase,
+        config_entry: ConfigEntry | None = None,
+        update_interval: timedelta | None = None,
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific Kumo device."""
         self.device = device
+        self.config_entry = config_entry
         self._available = False
         self._unavailable_count = 0
         self._additional_update_methods = []
@@ -34,8 +39,19 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"kumo_{device.get_serial()}",
-            update_interval=SCAN_INTERVAL,
+            update_interval=update_interval if update_interval is not None else SCAN_INTERVAL,
         )
+
+    @property
+    def post_command_refresh_delay(self) -> float:
+        """Return the configured post-command refresh delay in seconds."""
+        if self.config_entry is not None:
+            return float(
+                self.config_entry.options.get(
+                    CONF_POST_COMMAND_REFRESH_DELAY, DEFAULT_POST_COMMAND_REFRESH_DELAY
+                )
+            )
+        return DEFAULT_POST_COMMAND_REFRESH_DELAY
 
     def get_device(self) -> PyKumoBase:
         return self.device
