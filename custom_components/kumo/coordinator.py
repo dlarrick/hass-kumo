@@ -31,7 +31,6 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific Kumo device."""
         self.device = device
-        self.config_entry = config_entry
         self._available = False
         self._unavailable_count = 0
         self._additional_update_methods = []
@@ -40,6 +39,7 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=f"kumo_{device.get_serial()}",
             update_interval=update_interval if update_interval is not None else SCAN_INTERVAL,
+            config_entry=config_entry,
         )
 
     @property
