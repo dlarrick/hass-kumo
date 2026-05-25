@@ -3,6 +3,7 @@
 import logging
 import json
 import binascii
+from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 import pykumo
@@ -18,6 +19,8 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_PREFER_CACHE,
     CONF_RESPONSE_TIMEOUT,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
     DHCP_DISCOVERED_KEY,
     DOMAIN,
     KUMO_CONFIG_CACHE,
@@ -122,20 +125,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         connect_timeout = float(entry.options.get(CONF_CONNECT_TIMEOUT, "1.2"))
         response_timeout = float(entry.options.get(CONF_RESPONSE_TIMEOUT, "8"))
         timeouts = (connect_timeout, response_timeout)
+        scan_interval_secs = float(
+            entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
+        update_interval = timedelta(seconds=scan_interval_secs)
         pykumos = await hass.async_add_executor_job(
             account.make_pykumos, timeouts, True
         )
         for device in pykumos.values():
             if device.get_serial() not in coordinators:
                 coordinators[device.get_serial()] = KumoDataUpdateCoordinator(
-                    hass, device
+                    hass, device, config_entry=entry, update_interval=update_interval
                 )
 
+        entry.async_on_unload(entry.add_update_listener(_async_options_updated))
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
 
     _LOGGER.warning("Could not load config from KumoCloud")
     return False
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry):
+    """Reload the config entry when options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):

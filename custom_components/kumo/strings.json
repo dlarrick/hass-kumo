@@ -33,9 +33,12 @@
         }
       },
       "timeout_settings": {
+        "title": "Polling & Timing",
         "data": {
-          "connect_timeout": "Connection Timeout",
-          "response_timeout": "Response Timeout"
+          "connect_timeout": "Connection Timeout (seconds)",
+          "response_timeout": "Response Timeout (seconds)",
+          "scan_interval": "Poll Interval (seconds)",
+          "post_command_refresh_delay": "Post-Command Refresh Delay (seconds)"
         }
       },
       "unit_select": {
