@@ -3,16 +3,6 @@
 [![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo) [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
 
-> [!NOTE]
-> ## Comfort App Breakage — Resolved ✅
->
-> In June 2025, the rollout of Mitsubishi's new Comfort app (replacing Kumo Cloud) and its V3 server-side API broke the ability for new users (and anyone whose configuration changed) to retrieve unit passwords needed for local control.
->
-> **This has been fixed.** [pykumo 0.4.0](https://github.com/dlarrick/pykumo/releases/tag/v0.4.0) (February 2026) added V3 API support for credential retrieval with local network discovery ([pykumo#59](https://github.com/dlarrick/pykumo/pull/59), resolving [pykumo#58](https://github.com/dlarrick/pykumo/issues/58)). hass-kumo v0.4.1+ includes this fix. New installs, reinstalls, and reconfigurations all work again.
->
-> See [#189](https://github.com/dlarrick/hass-kumo/issues/189) for the full discussion.
->
-
 --------------------------------------
 
 ## Home Assistant component
@@ -51,14 +41,27 @@ Configure Kumo using the Home Assistant user interface.
 
 Once the Kumo integration is added, you'll have a card for it on the Integrations page. (Integrations are sorted by name, and the name of this integration is "Kumo".) The Kumo integration card includes a "Configure" link. The configuration panel lets you change the default timeout values for device connections, or update IP addresses for configured units. **Important:** New values don't take effect until you restart Home Assistant.
 
-- `prefer_cache`, if set, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`, to accommodate changing unit availability or DHCP leases. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true`. This will allow you to control your system even if KumoCloud or your Internet connection suffer an outage. The cache is in `config/kumo_cache.json`.
+- `prefer_cache`, if set, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`. When `false`, the integration will attempt to fetch current credentials from the KumoCloud V3 API on startup. If successful, it updates the local cache. If the Cloud is unreachable, it falls back to the local cache. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true` to skip cloud checks entirely. This allows you to control your system even if KumoCloud or your Internet connection suffer an outage. The cache is in `config/kumo_cache.json`.
 - `connect_timeout` and `response_timeout`, if set, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall Home Assistant responsiveness if you anticipate your units being offline.
+
+### DHCP Discovery
+
+Kumo supports automatic discovery of your indoor units via DHCP. When a Kumo adapter requests an IP address, Home Assistant can automatically detect it if the [DHCP integration](https://www.home-assistant.io/integrations/dhcp/) is active.
+
+The integration specifically monitors for devices with MAC addresses starting with the following prefixes:
+* `24:CD:8D` (Mitsumi Electric)
+* `38:8D:3D` (Mitsubishi Electric)
+* `50:26:EF` (Murata)
+* `70:74:14` (Ampak Technology)
+* `70:87:A7` (Mitsubishi Electric)
+
+During initial setup or reconfiguration, Kumo will use these discovered IP addresses to match with the credentials retrieved from your KumoCloud account. This significantly simplifies setup as it often removes the need to manually enter IP addresses.
 
 ### IP Addresses
 
-Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time (or at Home Assistant startup, if `prefer_cache` is False) from the Kumo Cloud web service. It is **strongly** recommended that you set a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
+Kumo accesses your indoor units directly on the local LAN using their IP address, discovered at setup time from the Kumo Cloud web service or via DHCP discovery. It is **strongly** recommended that you set a fixed IP address for your indoor unit(s), using something like a DHCP reservation.
 
-In some cases, Kumo is unable to retrieve the indoor units' addresses from the Kumo Cloud web service. If this happens, you will be prompted to supply the address(es) as part of setup. To obtain these addresses, you will need to find the MAC address of each indoor unit; it should be on a sticker on the outside of the WiFi interface.
+If DHCP discovery is unable to find a unit, and the Kumo Cloud web service does not provide an address, you will be prompted to supply the address(es) as part of setup or reconfiguration. To obtain these addresses, you will need to find the MAC address of each indoor unit; it should be on a sticker on the outside of the WiFi interface.
 
 Given each MAC address, go into your WiFi router's admin interface and write down the IP address assigned to each one. It should be in dotted-quad notation e.g. `192.168.1.141`. **Note:** Depending on your router, this is likely to be where you can permanently reserve an IP address, which is **highly recommended**
 
@@ -196,6 +199,14 @@ For bugs or feature improvements, feel free to create a GitHub issue or pull req
 - As of January 2020, Kumo is available in the HACS default store, and I consider it feature-complete and stable.
 - April 2020, updated this README documentation file.
 - July 2022, updated this README file again for changed Home Assistant user interface elements, and other clarifications.
+
+## Historical Comfort App Breakage
+
+In June 2025, the rollout of Mitsubishi's new Comfort app (replacing Kumo Cloud) and its V3 server-side API broke the ability for new users (and anyone whose configuration changed) to retrieve unit passwords needed for local control.
+
+**This has been fixed.** [pykumo 0.4.0](https://github.com/dlarrick/pykumo/releases/tag/v0.4.0) (February 2026) added V3 API support for credential retrieval with local network discovery ([pykumo#59](https://github.com/dlarrick/pykumo/pull/59), resolving [pykumo#58](https://github.com/dlarrick/pykumo/issues/58)). hass-kumo v0.4.1+ includes this fix. New installs, reinstalls, and reconfigurations all work again.
+
+See [#189](https://github.com/dlarrick/hass-kumo/issues/189) for the full discussion.
 
 ## License
 

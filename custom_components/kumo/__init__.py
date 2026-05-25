@@ -1,8 +1,9 @@
 """Support for Mitsubishi KumoCloud devices."""
 
 import logging
+import json
+import binascii
 from datetime import timedelta
-from typing import Optional
 
 import homeassistant.helpers.config_validation as cv
 import pykumo
@@ -82,16 +83,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     password = entry.data.get(CONF_PASSWORD)
     prefer_cache = entry.data.get(CONF_PREFER_CACHE)
 
-    # Try V3 API first (Comfort app API), fall back to V2 if it fails
-    candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
-    account = await async_kumo_setup_v3(hass, username, password, candidate_ips)
-    if not account:
-        _LOGGER.info("V3 setup failed, falling back to V2 API")
-        account = await async_kumo_setup_v2(hass, prefer_cache, username, password)
-    if not account:
-        account = await async_kumo_setup_v2(hass, not prefer_cache, username, password)
+    # Load cached config if available
+    cached_dict = await hass.async_add_executor_job(
+        load_json, hass.config.path(KUMO_CONFIG_CACHE)
+    )
+    if not isinstance(cached_dict, list) or len(cached_dict) < 3:
+        cached_dict = None
 
-    if account:
+    # Initialize account and try setup
+    account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_dict)
+    candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
+
+    try:
+        setup_success = await hass.async_add_executor_job(
+            account.try_setup, candidate_ips, prefer_cache
+        )
+    except (ConnectionError, OSError) as err:
+        _LOGGER.warning("Kumo setup failed due to network error: %s", err)
+        return False
+    except (json.JSONDecodeError, binascii.Error, ValueError) as err:
+        _LOGGER.error("Kumo setup failed due to malformed cached data: %s", err)
+        return False
+    except Exception:
+        _LOGGER.exception("Unexpected error during Kumo setup")
+        raise
+
+    if setup_success:
+        # Save updated config for next time
+        await hass.async_add_executor_job(
+            save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
+        )
+        _LOGGER.info("Kumo setup successful")
+
         hass.data[DOMAIN][entry.entry_id][KUMO_DATA] = KumoCloudSettings(
             account, entry.data, entry.options
         )
@@ -119,69 +142,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
 
-    _LOGGER.warning("Could not load config from KumoCloud (V3 or V2)")
+    _LOGGER.warning("Could not load config from KumoCloud")
     return False
-
-
-async def async_kumo_setup_v3(
-    hass: HomeAssistant, username: str, password: str, candidate_ips: dict = None
-) -> Optional[pykumo.KumoCloudAccount]:
-    """Attempt setup using V3 API (Comfort app).
-
-    Loads any cached kumo_dict first so device addresses are preserved.
-    """
-    cached_dict = await hass.async_add_executor_job(
-        load_json, hass.config.path(KUMO_CONFIG_CACHE)
-    )
-    if cached_dict and isinstance(cached_dict, list) and len(cached_dict) >= 3:
-        account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_dict)
-    else:
-        account = pykumo.KumoCloudAccount(username, password)
-
-    try:
-        setup_success = await hass.async_add_executor_job(
-            account.try_setup_v3_only, candidate_ips or {}
-        )
-    except (ConnectionError, OSError) as err:
-        _LOGGER.warning(
-            "V3 setup failed due to network error, will fall back to V2: %s", err
-        )
-        return None
-
-    if setup_success:
-        await hass.async_add_executor_job(
-            save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
-        )
-        _LOGGER.info("Loaded config from V3 API (Comfort app)")
-        return account
-
-    return None
-
-
-async def async_kumo_setup_v2(
-    hass: HomeAssistant, prefer_cache: bool, username: str, password: str
-) -> Optional[pykumo.KumoCloudAccount]:
-    """Attempt to load data from cache or V2 Kumo Cloud API."""
-    if prefer_cache:
-        cached_json = await hass.async_add_executor_job(
-            load_json, hass.config.path(KUMO_CONFIG_CACHE)
-        ) or {"fetched": False}
-        account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_json)
-    else:
-        account = pykumo.KumoCloudAccount(username, password)
-
-    setup_success = await hass.async_add_executor_job(account.try_setup)
-
-    if setup_success:
-        if prefer_cache:
-            _LOGGER.info("Loaded config from local cache")
-        else:
-            await hass.async_add_executor_job(
-                save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
-            )
-            _LOGGER.info("Loaded config from KumoCloud V2 server")
-
-        return account
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry):
