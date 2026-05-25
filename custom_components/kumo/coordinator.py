@@ -5,8 +5,7 @@ from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator,
-                                                      UpdateFailed)
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pykumo import PyKumoBase
 
 from .const import SCAN_INTERVAL
@@ -55,7 +54,9 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
             for update_method in self._additional_update_methods:
                 await update_method()
         else:
-            raise UpdateFailed(f"Failed to update Kumo device: {self.device.get_name()}")
+            raise UpdateFailed(
+                f"Failed to update Kumo device: {self.device.get_name()}"
+            )
 
     def _update_availability(self, success: bool) -> None:
         if success:

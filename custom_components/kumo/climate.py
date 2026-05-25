@@ -1,4 +1,5 @@
 """HomeAssistant climate component for KumoCloud connected HVAC units."""
+
 import logging
 import pprint
 
@@ -153,10 +154,10 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._swing_modes = self._pykumo.get_vane_directions()
         self._hvac_modes = [HVACMode.OFF, HVACMode.COOL]
         self._supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE |
-            ClimateEntityFeature.FAN_MODE |
-            ClimateEntityFeature.TURN_OFF |
-            ClimateEntityFeature.TURN_ON
+            ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.FAN_MODE
+            | ClimateEntityFeature.TURN_OFF
+            | ClimateEntityFeature.TURN_ON
         )
         if self._pykumo.has_dry_mode():
             self._hvac_modes.append(HVACMode.DRY)
@@ -262,7 +263,11 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
     def _store_last_hvac_mode(self, hvac_mode, caller):
         """Persist last active hvac mode for turn_on."""
-        if hvac_mode in (None, HVACMode.OFF) or not self.hass or self._identifier is None:
+        if (
+            hvac_mode in (None, HVACMode.OFF)
+            or not self.hass
+            or self._identifier is None
+        ):
             return
         set_last_hvac_mode_value(self.hass, self._identifier, hvac_mode.value)
         _LOGGER.debug(
@@ -558,7 +563,11 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
 
         response = self._pykumo.set_mode(mode)
         _LOGGER.debug(
-            "Kumo %s set mode %s (via `%s`) response: %s", self._name, hvac_mode, caller, response
+            "Kumo %s set mode %s (via `%s`) response: %s",
+            self._name,
+            hvac_mode,
+            caller,
+            response,
         )
         self._store_last_hvac_mode(hvac_mode, caller=caller)
 
