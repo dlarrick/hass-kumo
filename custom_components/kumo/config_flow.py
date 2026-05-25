@@ -101,10 +101,13 @@ async def validate_input(hass: core.HomeAssistant, data):
     """
     # Collect DHCP-discovered IPs
     candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
+    prefer_cache = data.get("prefer_cache", False)
 
     account = KumoCloudAccount(data["username"], data["password"])
     try:
-        result = await hass.async_add_executor_job(account.try_setup, candidate_ips)
+        result = await hass.async_add_executor_job(
+            account.try_setup, candidate_ips, prefer_cache
+        )
     except ConnectionError:
         raise CannotConnect
 

@@ -1,6 +1,8 @@
 """Support for Mitsubishi KumoCloud devices."""
 
 import logging
+import json
+import binascii
 
 import homeassistant.helpers.config_validation as cv
 import pykumo
@@ -93,9 +95,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         setup_success = await hass.async_add_executor_job(
             account.try_setup, candidate_ips, prefer_cache
         )
-    except Exception as err:
-        _LOGGER.warning("Kumo setup failed: %s", err)
-        setup_success = False
+    except (ConnectionError, OSError) as err:
+        _LOGGER.warning("Kumo setup failed due to network error: %s", err)
+        return False
+    except (json.JSONDecodeError, binascii.Error, ValueError) as err:
+        _LOGGER.error("Kumo setup failed due to malformed cached data: %s", err)
+        return False
+    except Exception:
+        _LOGGER.exception("Unexpected error during Kumo setup")
+        raise
 
     if setup_success:
         # Save updated config for next time

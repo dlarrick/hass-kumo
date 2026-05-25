@@ -95,12 +95,17 @@ async def test_dhcp_discovery(hass: HomeAssistant):
 
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
-    assert result["unique_id"] == "112233445566"
 
     # Verify candidate IP was stored
     from custom_components.kumo.const import DHCP_DISCOVERED_KEY
 
     assert hass.data[DHCP_DISCOVERED_KEY]["112233445566"] == "192.168.1.100"
+
+    # Verify the flow unique_id is set
+    flows = hass.config_entries.flow.async_progress()
+    for flow in flows:
+        if flow["handler"] == DOMAIN:
+            assert flow["context"]["unique_id"] == "112233445566"
 
 
 async def test_dhcp_discovery_already_configured(hass: HomeAssistant):
