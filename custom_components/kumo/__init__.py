@@ -1,4 +1,5 @@
 """Support for Mitsubishi KumoCloud devices."""
+
 import logging
 from datetime import timedelta
 from typing import Optional
@@ -72,6 +73,7 @@ class KumoCloudSettings:
         """Retrieve raw JSON config from account."""
         return self._account.get_raw_json()
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Setup Kumo Entry"""
     hass.data.setdefault(DOMAIN, {})
@@ -90,21 +92,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         account = await async_kumo_setup_v2(hass, not prefer_cache, username, password)
 
     if account:
-        hass.data[DOMAIN][entry.entry_id][KUMO_DATA] = KumoCloudSettings(account, entry.data, entry.options)
+        hass.data[DOMAIN][entry.entry_id][KUMO_DATA] = KumoCloudSettings(
+            account, entry.data, entry.options
+        )
 
         # Create a data coordinator for each Kumo device
         hass.data[DOMAIN][entry.entry_id].setdefault(KUMO_DATA_COORDINATORS, {})
         coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
-        connect_timeout = float(
-            entry.options.get(CONF_CONNECT_TIMEOUT, "1.2")
-        )
-        response_timeout = float(
-            entry.options.get(CONF_RESPONSE_TIMEOUT, "8")
-        )
+        connect_timeout = float(entry.options.get(CONF_CONNECT_TIMEOUT, "1.2"))
+        response_timeout = float(entry.options.get(CONF_RESPONSE_TIMEOUT, "8"))
         timeouts = (connect_timeout, response_timeout)
-        scan_interval_secs = float(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        scan_interval_secs = float(
+            entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
         update_interval = timedelta(seconds=scan_interval_secs)
-        pykumos = await hass.async_add_executor_job(account.make_pykumos, timeouts, True)
+        pykumos = await hass.async_add_executor_job(
+            account.make_pykumos, timeouts, True
+        )
         for device in pykumos.values():
             if device.get_serial() not in coordinators:
                 coordinators[device.get_serial()] = KumoDataUpdateCoordinator(
@@ -118,7 +122,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.warning("Could not load config from KumoCloud (V3 or V2)")
     return False
 
-async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str, candidate_ips: dict = None) -> Optional[pykumo.KumoCloudAccount]:
+
+async def async_kumo_setup_v3(
+    hass: HomeAssistant, username: str, password: str, candidate_ips: dict = None
+) -> Optional[pykumo.KumoCloudAccount]:
     """Attempt setup using V3 API (Comfort app).
 
     Loads any cached kumo_dict first so device addresses are preserved.
@@ -136,7 +143,9 @@ async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str,
             account.try_setup_v3_only, candidate_ips or {}
         )
     except (ConnectionError, OSError) as err:
-        _LOGGER.warning("V3 setup failed due to network error, will fall back to V2: %s", err)
+        _LOGGER.warning(
+            "V3 setup failed due to network error, will fall back to V2: %s", err
+        )
         return None
 
     if setup_success:
@@ -148,7 +157,10 @@ async def async_kumo_setup_v3(hass: HomeAssistant, username: str, password: str,
 
     return None
 
-async def async_kumo_setup_v2(hass: HomeAssistant, prefer_cache: bool, username: str, password: str) -> Optional[pykumo.KumoCloudAccount]:
+
+async def async_kumo_setup_v2(
+    hass: HomeAssistant, prefer_cache: bool, username: str, password: str
+) -> Optional[pykumo.KumoCloudAccount]:
     """Attempt to load data from cache or V2 Kumo Cloud API."""
     if prefer_cache:
         cached_json = await hass.async_add_executor_job(
@@ -171,6 +183,7 @@ async def async_kumo_setup_v2(hass: HomeAssistant, prefer_cache: bool, username:
 
         return account
 
+
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry):
     """Reload the config entry when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
@@ -181,7 +194,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     all_ok = True
     for platform in PLATFORMS:
-        unload_ok = await hass.config_entries.async_forward_entry_unload(entry, platform)
+        unload_ok = await hass.config_entries.async_forward_entry_unload(
+            entry, platform
+        )
         if not unload_ok:
             all_ok = False
 

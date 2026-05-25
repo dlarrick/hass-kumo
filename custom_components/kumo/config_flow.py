@@ -1,9 +1,11 @@
 """Config flow for Kumo integration."""
+
 import logging
 import os
 
 import voluptuous as vol
 from homeassistant import config_entries, core, exceptions
+
 try:
     from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 except ImportError:
@@ -46,6 +48,7 @@ class PlaceholderAccount:
 # The kumo_dict structure nests units in children[].zoneTable and
 # optionally children[].children[].zoneTable. These helpers avoid
 # repeating that traversal pattern throughout the code.
+
 
 def _iter_zone_units(kumo_cache):
     """Yield (serial, raw_unit) for every unit in the zone tables."""
@@ -100,6 +103,7 @@ def _merge_cache_addresses(kumo_cache, cached_json):
 
 # ── Validation ──────────────────────────────────────────────
 
+
 async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input and return an authenticated account.
 
@@ -135,6 +139,7 @@ async def validate_input(hass: core.HomeAssistant, data):
 
 # ── Config Flow ─────────────────────────────────────────────
 
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Kumo."""
 
@@ -145,7 +150,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle discovery of a Kumo adapter via DHCP."""
         _LOGGER.info(
             "Discovered Kumo adapter via DHCP: %s (%s)",
-            discovery_info.ip, discovery_info.macaddress,
+            discovery_info.ip,
+            discovery_info.macaddress,
         )
         # Store the MAC->IP mapping for later use during setup
         discovered = self.hass.data.setdefault(DHCP_DISCOVERED_KEY, {})
@@ -190,18 +196,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     cached_json = await self.hass.async_add_executor_job(
                         load_json, cache_path
                     )
-                    if cached_json and _merge_cache_addresses(self.kumo_cache, cached_json):
+                    if cached_json and _merge_cache_addresses(
+                        self.kumo_cache, cached_json
+                    ):
                         _LOGGER.info("Merged IP addresses from existing cache")
 
                 # Build unit list
                 self.units = []
                 for serial, raw_unit in _iter_zone_units(self.kumo_cache):
-                    self.units.append({
-                        "label": _get_unit_label(raw_unit, serial),
-                        "ip_address": raw_unit.get("address", "empty") or "empty",
-                        "mac": raw_unit.get("mac", "unknown"),
-                        "serial": serial,
-                    })
+                    self.units.append(
+                        {
+                            "label": _get_unit_label(raw_unit, serial),
+                            "ip_address": raw_unit.get("address", "empty") or "empty",
+                            "mac": raw_unit.get("mac", "unknown"),
+                            "serial": serial,
+                        }
+                    )
 
                 ip_addresses = [u["ip_address"] for u in self.units]
                 if "empty" in ip_addresses:
@@ -314,7 +324,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=300)),
                 vol.Required(
                     CONF_POST_COMMAND_REFRESH_DELAY,
-                    default=float(current.get(CONF_POST_COMMAND_REFRESH_DELAY, DEFAULT_POST_COMMAND_REFRESH_DELAY)),
+                    default=float(
+                        current.get(
+                            CONF_POST_COMMAND_REFRESH_DELAY,
+                            DEFAULT_POST_COMMAND_REFRESH_DELAY,
+                        )
+                    ),
                 ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=30.0)),
             }
         )
@@ -333,7 +348,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             kumo_unit_list[label] = (str(raw_unit.get("address", "empty")),)
 
         if user_input is not None:
-            _set_unit_address(kumo_cache, user_input["unit_label"], user_input["ip_address"])
+            _set_unit_address(
+                kumo_cache, user_input["unit_label"], user_input["ip_address"]
+            )
             await self.hass.async_add_executor_job(
                 save_json, self.hass.config.path(KUMO_CONFIG_CACHE), kumo_cache
             )

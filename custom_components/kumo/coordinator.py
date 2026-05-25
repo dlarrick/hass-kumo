@@ -7,11 +7,14 @@ from typing import TypeVar
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator,
-                                                      UpdateFailed)
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pykumo import PyKumoBase
 
-from .const import CONF_POST_COMMAND_REFRESH_DELAY, DEFAULT_POST_COMMAND_REFRESH_DELAY, SCAN_INTERVAL
+from .const import (
+    CONF_POST_COMMAND_REFRESH_DELAY,
+    DEFAULT_POST_COMMAND_REFRESH_DELAY,
+    SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 MAX_AVAILABILITY_TRIES = 3
@@ -38,7 +41,9 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"kumo_{device.get_serial()}",
-            update_interval=update_interval if update_interval is not None else SCAN_INTERVAL,
+            update_interval=update_interval
+            if update_interval is not None
+            else SCAN_INTERVAL,
             config_entry=config_entry,
         )
 
@@ -71,7 +76,9 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
             for update_method in self._additional_update_methods:
                 await update_method()
         else:
-            raise UpdateFailed(f"Failed to update Kumo device: {self.device.get_name()}")
+            raise UpdateFailed(
+                f"Failed to update Kumo device: {self.device.get_name()}"
+            )
 
     def _update_availability(self, success: bool) -> None:
         if success:
