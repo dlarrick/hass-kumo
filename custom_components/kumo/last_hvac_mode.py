@@ -1,4 +1,5 @@
 """Shared storage for last active HVAC mode."""
+
 from __future__ import annotations
 
 from homeassistant.components.climate.const import HVACMode

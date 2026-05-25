@@ -1,4 +1,5 @@
 """Entities for the Kumo integration."""
+
 from __future__ import annotations
 
 from homeassistant.helpers.entity import DeviceInfo
@@ -11,10 +12,7 @@ from .coordinator import KumoDataUpdateCoordinator
 class CoordinatedKumoEntity(CoordinatorEntity):
     """Defines a base Kumo entity."""
 
-    def __init__(
-        self,
-        coordinator: KumoDataUpdateCoordinator
-    ) -> None:
+    def __init__(self, coordinator: KumoDataUpdateCoordinator) -> None:
         """Initialize the Kumo entity."""
         super().__init__(coordinator)
         self._coordinator = coordinator
