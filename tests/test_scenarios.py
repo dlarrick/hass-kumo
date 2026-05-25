@@ -1,21 +1,7 @@
-import pytest
 from unittest.mock import patch
 from homeassistant.core import HomeAssistant
 from custom_components.kumo.const import DOMAIN
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-
-@pytest.fixture
-async def kumo_setup(hass):
-    """Fixture to set up the kumo integration."""
-    entry = MockConfigEntry(
-        domain=DOMAIN, data={"username": "user", "password": "pass"}
-    )
-    entry.add_to_hass(hass)
-    with patch("custom_components.kumo.async_setup_entry", return_value=True):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-    return entry
 
 
 async def test_scenario_1_cached_info_fine(hass: HomeAssistant):

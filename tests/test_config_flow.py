@@ -112,7 +112,6 @@ async def test_dhcp_discovery_already_configured(hass: HomeAssistant):
     """Test DHCP discovery when already configured."""
     from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
     from pytest_homeassistant_custom_component.common import MockConfigEntry
-    from unittest.mock import patch
 
     entry = MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN, data={})
     entry.add_to_hass(hass)
