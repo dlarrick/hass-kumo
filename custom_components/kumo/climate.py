@@ -152,26 +152,19 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._sensor_rssi = None
         self._runstate = None
         self._pending_refresh_task: asyncio.Task | None = None
-        self._fan_modes = self._pykumo.get_fan_speeds()
-        self._swing_modes = self._pykumo.get_vane_directions()
-        self._hvac_modes = [HVACMode.OFF, HVACMode.COOL]
+        # Initialise to safe defaults; _refresh_capabilities() will populate
+        # properly once the unit profile is available (either now at startup
+        # if the adapter is online, or after the first successful poll).
+        self._hvac_modes: list = [HVACMode.OFF, HVACMode.COOL]
+        self._fan_modes: list = []
+        self._swing_modes: list = []
         self._supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.FAN_MODE
             | ClimateEntityFeature.TURN_OFF
             | ClimateEntityFeature.TURN_ON
         )
-        if self._pykumo.has_dry_mode():
-            self._hvac_modes.append(HVACMode.DRY)
-        if self._pykumo.has_heat_mode():
-            self._hvac_modes.append(HVACMode.HEAT)
-        if self._pykumo.has_vent_mode():
-            self._hvac_modes.append(HVACMode.FAN_ONLY)
-        if self._pykumo.has_auto_mode():
-            self._hvac_modes.append(HVACMode.HEAT_COOL)
-            self._supported_features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-        if self._pykumo.has_vane_direction():
-            self._supported_features |= ClimateEntityFeature.SWING_MODE
+        self._refresh_capabilities()
         for prop in KumoThermostat._update_properties:
             try:
                 setattr(self, f"_{prop}", None)
@@ -182,6 +175,51 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
                     prop,
                     str(err),
                 )
+
+    def _refresh_capabilities(self) -> None:
+        """Recompute HVAC/fan/swing mode lists from the current pykumo profile.
+
+        This is called both at __init__ time and after every coordinator update.
+        It uses an upgrade-only strategy for hvac_modes: modes are only ever
+        added, never removed.  This means a transient poll failure (which leaves
+        pykumo's _profile unchanged) cannot strip a capability that was already
+        confirmed.  A unit that came online and reported heat_cool will continue
+        to report heat_cool even if the next poll times out.
+
+        fan_modes and swing_modes are always refreshed from the live profile
+        because pykumo preserves the last-good profile across failures, so
+        overwriting them on every successful update is safe.
+        """
+        # --- fan / swing: always read from current profile ---
+        fan_speeds = self._pykumo.get_fan_speeds()
+        if fan_speeds:
+            self._fan_modes = fan_speeds
+        vane_dirs = self._pykumo.get_vane_directions()
+        if vane_dirs:
+            self._swing_modes = vane_dirs
+
+        # --- hvac_modes: upgrade-only merge ---
+        if self._pykumo.has_dry_mode() and HVACMode.DRY not in self._hvac_modes:
+            self._hvac_modes.append(HVACMode.DRY)
+        if self._pykumo.has_heat_mode() and HVACMode.HEAT not in self._hvac_modes:
+            self._hvac_modes.append(HVACMode.HEAT)
+        if self._pykumo.has_vent_mode() and HVACMode.FAN_ONLY not in self._hvac_modes:
+            self._hvac_modes.append(HVACMode.FAN_ONLY)
+        if self._pykumo.has_auto_mode() and HVACMode.HEAT_COOL not in self._hvac_modes:
+            self._hvac_modes.append(HVACMode.HEAT_COOL)
+            self._supported_features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+
+        # --- swing support flag: upgrade-only ---
+        if self._pykumo.has_vane_direction():
+            self._supported_features |= ClimateEntityFeature.SWING_MODE
+
+        _LOGGER.debug(
+            "Kumo %s capabilities: hvac_modes=%s fan_modes=%s swing_modes=%s",
+            self._name,
+            self._hvac_modes,
+            self._fan_modes,
+            self._swing_modes,
+        )
 
     @property
     def unique_id(self):
@@ -196,6 +234,8 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             if not self.available:
                 # Get out early if it's failing
                 break
+        # Re-derive capability lists now that the profile may have been updated.
+        self._refresh_capabilities()
 
     def _update_property(self, prop):
         """Call to refresh the value of a property -- may block on I/O."""
