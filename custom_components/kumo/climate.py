@@ -180,17 +180,37 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         """Recompute HVAC/fan/swing mode lists from the current pykumo profile.
 
         This is called both at __init__ time and after every coordinator update.
-        It uses an upgrade-only strategy for hvac_modes: modes are only ever
-        added, never removed.  This means a transient poll failure (which leaves
-        pykumo's _profile unchanged) cannot strip a capability that was already
-        confirmed.  A unit that came online and reported heat_cool will continue
-        to report heat_cool even if the next poll times out.
 
-        fan_modes and swing_modes are always refreshed from the live profile
-        because pykumo preserves the last-good profile across failures, so
-        overwriting them on every successful update is safe.
+        All capability derivation is gated on the pykumo profile being
+        non-empty.  pykumo initialises ``_profile`` to ``{}`` and only
+        populates it after a successful poll.  Reading capabilities from an
+        empty profile produces misleading defaults (e.g. ``get_fan_speeds()``
+        falls back to a hard-coded 5-item list when ``numberOfFanSpeeds`` is
+        absent, so ``if fan_speeds:`` does not guard against it).  Skipping
+        capability derivation entirely when the profile is empty means the
+        entity keeps its safe init defaults ([OFF, COOL], no fan/swing lists)
+        until the first real poll arrives.
+
+        Once the profile is populated the upgrade-only strategy for hvac_modes
+        ensures modes are only ever added, never removed.  A transient poll
+        failure (which leaves pykumo's _profile unchanged) cannot strip a
+        capability that was already confirmed.  fan_modes and swing_modes are
+        overwritten on every populated-profile call; pykumo preserves the
+        last-good profile across poll failures so this is safe.
         """
-        # --- fan / swing: always read from current profile ---
+        # Gate all capability reads on having a real (populated) profile.
+        # pykumo sets _profile = {} at init; it is only filled after a
+        # successful network poll.  Without this guard, get_fan_speeds() (and
+        # the has_*() helpers) return hard-coded defaults that would be cached
+        # as if they came from the real hardware.
+        if not self._pykumo._profile:  # noqa: SLF001 — no public profile getter
+            _LOGGER.debug(
+                "Kumo %s: profile not yet populated, skipping capability refresh",
+                self._name,
+            )
+            return
+
+        # --- fan / swing: overwrite from current (real) profile ---
         fan_speeds = self._pykumo.get_fan_speeds()
         if fan_speeds:
             self._fan_modes = fan_speeds
