@@ -203,7 +203,9 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         # successful network poll.  Without this guard, get_fan_speeds() (and
         # the has_*() helpers) return hard-coded defaults that would be cached
         # as if they came from the real hardware.
-        if not self._pykumo._profile:  # noqa: SLF001 — no public profile getter
+        # TODO: replace with self._pykumo.has_profile() once
+        #       dlarrick/pykumo#72 is released and pykumo requirement is bumped.
+        if not self._pykumo._profile:  # noqa: SLF001 — no public profile getter yet
             _LOGGER.debug(
                 "Kumo %s: profile not yet populated, skipping capability refresh",
                 self._name,
