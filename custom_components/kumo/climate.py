@@ -195,8 +195,9 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         ensures modes are only ever added, never removed.  A transient poll
         failure (which leaves pykumo's _profile unchanged) cannot strip a
         capability that was already confirmed.  fan_modes and swing_modes are
-        overwritten on every populated-profile call; pykumo preserves the
-        last-good profile across poll failures so this is safe.
+        updated from the live profile only when the returned list is non-empty;
+        a transient empty read therefore never clobbers a previously confirmed
+        list, consistent with the upgrade-only philosophy.
         """
         # Gate all capability reads on having a real (populated) profile.
         # pykumo sets _profile = {} at init; it is only filled after a
