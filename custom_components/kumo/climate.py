@@ -199,14 +199,12 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         a transient empty read therefore never clobbers a previously confirmed
         list, consistent with the upgrade-only philosophy.
         """
-        # Gate all capability reads on having a real (populated) profile.
-        # pykumo sets _profile = {} at init; it is only filled after a
-        # successful network poll.  Without this guard, get_fan_speeds() (and
-        # the has_*() helpers) return hard-coded defaults that would be cached
-        # as if they came from the real hardware.
-        # TODO: replace with self._pykumo.has_profile() once
-        #       dlarrick/pykumo#72 is released and pykumo requirement is bumped.
-        if not self._pykumo._profile:  # noqa: SLF001 — no public profile getter yet
+        # Skip until the unit profile has been populated by a successful poll.
+        # pykumo sets _profile = {} at init and populates it after the first
+        # successful update_status() call.  Without this guard, get_fan_speeds()
+        # (and the has_*() helpers) return hard-coded defaults that would be
+        # cached as if they came from the real hardware.
+        if not self._pykumo.has_profile():
             _LOGGER.debug(
                 "Kumo %s: profile not yet populated, skipping capability refresh",
                 self._name,
