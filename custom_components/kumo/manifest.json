@@ -7,11 +7,12 @@
     "dependencies": [],
     "codeowners": [ "@dlarrick" ],
     "requirements": ["pykumo>=0.5.2"],
-    "version": "0.4.6",
+    "version": "0.4.7",
     "homeassistant": "2025.1.0",
     "iot_class": "local_polling",
     "integration_type": "hub",
     "dhcp": [
+        { "macaddress": "04C461*" },
         { "macaddress": "24CD8D*" },
         { "macaddress": "388D3D*" },
         { "macaddress": "5026EF*" },
