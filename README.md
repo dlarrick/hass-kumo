@@ -15,6 +15,14 @@ Mitubishi Kumo Cloud (Kumo for short) is a custom component for Home Assistant t
 - Supports displaying the Outdoor Temperature for Kumo Station.
 - Supports displaying Wi-Fi signal strength (RSSI) of each unit (disabled by default).
 
+## Current Status
+Mitsubishi has once again made changes that prevent us from retrieving local-control credentials from the cloud service (Comfort) in the US (see [#78](https://github.com/dlarrick/pykumo/issues/78) and [#233](https://github.com/dlarrick/hass-kumo/issues/233) / [#230](https://github.com/dlarrick/hass-kumo/issues/230)). The Canadian market seems to be still using Kumo Cloud (see [#62](https://github.com/dlarrick/pykumo/issues/62) and [#232](https://github.com/dlarrick/hass-kumo/issues/232)) and so it may be possible for Canadian users to retrieve the required information.
+
+What does this mean for you?
+* If it's working for you, **don't change anything** (especially not network-related) and **safeguard your `kumo_cache.py` file**
+* If you're a new user or add new indoor units to your system, you're out of luck. I recommend the [esp32 route](https://github.com/dlarrick/hass-kumo/issues/190) if you have the technical skills.
+* The official [Mitsubishi Comfort](https://www.home-assistant.io/integrations/mitsubishi_comfort/) Home Assistant integration (heavily leveraged my own work without my knowledge) seems to be leaning toward cloud control, and so may be a (less performant) alternative.
+
 ## Installation
 
 **Note**: Kumo is not included in Home Assistant as an official integration. Instead, the recommended way to install it is through the [Home Assistant Community Store](https://hacs.xyz/docs/setup/download/) (HACS) add-in.
