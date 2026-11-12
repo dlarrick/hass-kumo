@@ -109,13 +109,16 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
+MAINTENANCE_BUFFER_F = 0.5
+MAINTENANCE_BUFFER_C = 0.3
+
+
 class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
     """Representation of a Kumo Thermostat device."""
 
     _update_properties = [
         "current_humidity",
         "hvac_mode",
-        "hvac_action",
         "fan_mode",
         "swing_mode",
         "current_temperature",
@@ -141,7 +144,6 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._target_temperature_high = None
         self._current_humidity = None
         self._hvac_mode = None
-        self._hvac_action = None
         self._fan_mode = None
         self._swing_mode = None
         self._current_temperature = None
@@ -280,7 +282,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         return self.hass.config.units.temperature_unit == UnitOfTemperature.FAHRENHEIT
 
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return the unit of measurement which this thermostat uses."""
         if self._use_fahrenheit:
             return UnitOfTemperature.FAHRENHEIT
@@ -341,22 +343,70 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         )
 
     @property
-    def hvac_action(self):
-        """Return current hvac operation in action."""
-        return self._hvac_action
+    def hvac_action(self) -> HVACAction | None:
+        """Infer active heating/cooling vs idle state with plateau maintenance buffer."""
+        mode = self.hvac_mode
+        if mode == HVACMode.OFF:
+            return HVACAction.OFF
 
-    def _update_hvac_action(self):
-        """Refresh cached hvac action."""
-        standby = self._pykumo.get_standby()
-        if standby:
-            result = HVACAction.IDLE
-        else:
-            mode = self._pykumo.get_mode()
-            try:
-                result = KUMO_STATE_TO_HA_ACTION[mode]
-            except KeyError:
-                result = None
-        self._hvac_action = result
+        try:
+            if self._pykumo.get_standby():
+                return HVACAction.IDLE
+        except Exception:  # noqa: BLE001
+            pass
+
+        if mode == HVACMode.FAN_ONLY:
+            return HVACAction.FAN
+
+        if mode == HVACMode.DRY:
+            return HVACAction.DRYING
+
+        curr = self.native_current_temperature
+        if curr is None:
+            # Cannot infer without temperature reading
+            if mode == HVACMode.HEAT:
+                return HVACAction.HEATING
+            if mode == HVACMode.COOL:
+                return HVACAction.COOLING
+            return HVACAction.IDLE
+
+        # Select buffer according to unit's temperature units
+        buf = (
+            MAINTENANCE_BUFFER_F
+            if self.native_temperature_unit == UnitOfTemperature.FAHRENHEIT
+            else MAINTENANCE_BUFFER_C
+        )
+
+        # 1. Pure Heating
+        if mode == HVACMode.HEAT:
+            target = self.native_target_temperature
+            if target is not None:
+                # Inside buffer: still maintaining plateau -> HEATING
+                # Cleared buffer: satisfied -> IDLE
+                return HVACAction.HEATING if curr < target + buf else HVACAction.IDLE
+            return HVACAction.HEATING
+
+        # 2. Pure Cooling
+        if mode == HVACMode.COOL:
+            target = self.native_target_temperature
+            if target is not None:
+                # Inside buffer: still maintaining plateau -> COOLING
+                # Cleared buffer: satisfied -> IDLE
+                return HVACAction.COOLING if curr > target - buf else HVACAction.IDLE
+            return HVACAction.COOLING
+
+        # 3. Dual Setpoint (Auto / Heat-Cool)
+        if mode == HVACMode.HEAT_COOL:
+            target_low = self.native_target_temperature_low
+            target_high = self.native_target_temperature_high
+
+            if target_low is not None and curr < target_low + buf:
+                return HVACAction.HEATING
+            if target_high is not None and curr > target_high - buf:
+                return HVACAction.COOLING
+            return HVACAction.IDLE
+
+        return HVACAction.IDLE
 
     @property
     def hvac_modes(self):
@@ -392,7 +442,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         return self._swing_modes
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return the current temperature."""
         return self._current_temperature
 
@@ -404,7 +454,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._current_temperature = temp
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the temperature we try to reach."""
         return self._target_temperature
 
@@ -423,7 +473,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._target_temperature = temp
 
     @property
-    def target_temperature_high(self):
+    def native_target_temperature_high(self):
         """Return the high dual setpoint temperature."""
         return self._target_temperature_high
 
@@ -440,7 +490,7 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         self._target_temperature_high = temp
 
     @property
-    def target_temperature_low(self):
+    def native_target_temperature_low(self):
         """Return the low dual setpoint temperature."""
         return self._target_temperature_low
 
