@@ -1,22 +1,40 @@
 {
-    "domain": "kumo",
-    "name": "Kumo",
-    "config_flow": true,
-    "documentation": "https://github.com/dlarrick/hass-kumo",
-    "issue_tracker": "https://github.com/dlarrick/hass-kumo/issues",
-    "dependencies": [],
-    "codeowners": [ "@dlarrick" ],
-    "requirements": ["pykumo>=0.5.5"],
-    "version": "0.4.8",
-    "homeassistant": "2026.11.0",
-    "iot_class": "local_polling",
-    "integration_type": "hub",
-    "dhcp": [
-        { "macaddress": "04C461*" },
-        { "macaddress": "24CD8D*" },
-        { "macaddress": "388D3D*" },
-        { "macaddress": "5026EF*" },
-        { "macaddress": "707414*" },
-        { "macaddress": "7087A7*" }
-    ]
+  "domain": "kumo",
+  "name": "Kumo",
+  "categories": [
+    "climate"
+  ],
+  "codeowners": [
+    "@dlarrick"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "dhcp": [
+    {
+      "macaddress": "04C461*"
+    },
+    {
+      "macaddress": "24CD8D*"
+    },
+    {
+      "macaddress": "388D3D*"
+    },
+    {
+      "macaddress": "5026EF*"
+    },
+    {
+      "macaddress": "707414*"
+    },
+    {
+      "macaddress": "7087A7*"
+    }
+  ],
+  "documentation": "https://github.com/dlarrick/hass-kumo",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/dlarrick/hass-kumo/issues",
+  "requirements": [
+    "pykumo>=0.5.5"
+  ],
+  "version": "0.4.8"
 }
