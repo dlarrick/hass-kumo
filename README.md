@@ -1,6 +1,7 @@
 # Mitsubishi Kumo Cloud
 
-[![Type](https://img.shields.io/badge/Type-Custom_Component-orange.svg)](https://github.com/dlarrick/hass-kumo) [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
+[![GitHub Release](https://img.shields.io/github/v/release/dlarrick/hass-kumo)](https://github.com/dlarrick/hass-kumo/releases)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 
 
 --------------------------------------
@@ -25,14 +26,16 @@ What does this mean for you?
 
 ## Installation
 
-**Note**: Kumo is not included in Home Assistant as an official integration. Instead, the recommended way to install it is through the [Home Assistant Community Store](https://hacs.xyz/docs/setup/download/) (HACS) add-in.
+**Note**: Kumo is not included in Home Assistant as an official integration. Instead, the recommended way to install it is through the [Home Assistant Community Store](https://hacs.xyz/) (HACS).
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=dlarrick&repository=hass-kumo&category=integration)
 
 You can install Kumo in one of two ways.
 
-- **Automatic Installation.** Kumo is available in the HACS default store. Search for "Kumo" in the Integrations panel, and then click the **Mitsubishi Kumo Cloud** item in the results. Click the Install link, and then restart Home Assistant.
-- **Manual Installation.** To control your installation yourself, download the hass-kumo repo, and then copy the `custom_components/kumo` directory into a corresponding `custom_components/kumo` within your Home Assistant configuration directory. Then restart Home Assistant.
+- **Automatic Installation (Recommended).** Click the "Open in Home Assistant" badge above, or open HACS in your Home Assistant instance, search for "Kumo", select **Mitsubishi Kumo Cloud**, click **Download**, and restart Home Assistant.
+- **Manual Installation.** To control your installation yourself, download the hass-kumo repo, and copy the `custom_components/kumo` directory into `<config_dir>/custom_components/kumo` within your Home Assistant configuration directory. Then restart Home Assistant.
 
-We recommend using the HACS installation method, which makes future updates to Kumo easy to track and install. Click the HACS badge above for details on installing and using HACS.
+We recommend using the HACS installation method, which makes future updates to Kumo easy to track and install.
 
 ## Configuration
 

@@ -1,5 +1,6 @@
 """Support for Mitsubishi KumoCloud devices."""
 
+import asyncio
 import logging
 import json
 import binascii
@@ -94,9 +95,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_dict)
     candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
 
+    # Never run DHCP discovery inline.
+    # Upstream probes every candidate IP x every unreachable unit with a 3 s
+    # timeout during setup, so a few dead adapters stretch setup to minutes and
+    # HA cancels it, taking ALL units down. Setup now uses cached addresses only;
+    # discovery for unreachable units runs in the background after setup.
     try:
         setup_success = await hass.async_add_executor_job(
-            account.try_setup, candidate_ips, prefer_cache
+            account.try_setup, {}, prefer_cache
         )
     except (ConnectionError, OSError) as err:
         _LOGGER.warning("Kumo setup failed due to network error: %s", err)
@@ -129,13 +135,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         )
         update_interval = timedelta(seconds=scan_interval_secs)
+        # Skip pykumo's serial status poll (one dead unit = ~30 s
+        # each); poll all units in parallel instead, so a dead adapter only
+        # marks its own entity unavailable.
         pykumos = await hass.async_add_executor_job(
-            account.make_pykumos, timeouts, True
+            account.make_pykumos, timeouts, False
         )
         for device in pykumos.values():
             if device.get_serial() not in coordinators:
                 coordinators[device.get_serial()] = KumoDataUpdateCoordinator(
                     hass, device, config_entry=entry, update_interval=update_interval
+                )
+        await asyncio.gather(
+            *(coordinator.async_refresh() for coordinator in coordinators.values())
+        )
+
+        unreachable = _unreachable_units(account)
+        if unreachable:
+            _LOGGER.warning(
+                "Kumo loaded without %d unreachable unit(s): %s",
+                len(unreachable),
+                ", ".join(
+                    account.get_name(s) or u.get("label") or s
+                    for s, u in unreachable.items()
+                ),
+            )
+            if candidate_ips:
+                entry.async_create_background_task(
+                    hass,
+                    _async_rediscover(
+                        hass, entry, account, unreachable, dict(candidate_ips)
+                    ),
+                    "kumo_rediscover",
                 )
 
         entry.async_on_unload(entry.add_update_listener(_async_options_updated))
@@ -149,6 +180,75 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry):
     """Reload the config entry when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _zone_table(account) -> dict:
+    """Return pykumo's cached zone table (serial -> unit dict), or {}."""
+    if hasattr(account, "get_zone_table"):
+        return account.get_zone_table()
+    try:
+        return account.get_raw_json()[2]["children"][0]["zoneTable"]
+    except (TypeError, KeyError, IndexError):
+        return {}
+
+
+def _unreachable_units(account) -> dict:
+    """Units whose cached address did not answer during setup."""
+    if hasattr(account, "get_unreachable_units"):
+        return account.get_unreachable_units()
+    return {
+        serial: unit
+        for serial, unit in _zone_table(account).items()
+        if not unit.get("reachable")
+    }
+
+
+async def _async_rediscover(hass, entry, account, unreachable, candidate_ips):
+    """Background: look for unreachable units at other DHCP-seen addresses.
+
+    Reload only if a unit is found at a NEW address; a unit that simply comes
+    back at its cached address recovers on its own at the next poll.
+    """
+    try:
+        ips = [ip for ip in candidate_ips.values() if ip]
+        if not ips:
+            return
+
+        if hasattr(account, "rediscover_unreachable_units"):
+            moved = await hass.async_add_executor_job(
+                account.rediscover_unreachable_units, ips
+            )
+        else:
+            try:
+                from pykumo.py_kumo_discovery import probe_candidate_ips
+            except ImportError:
+                return
+            table = _zone_table(account)
+            in_use = {u.get("address") for u in table.values() if u.get("reachable")}
+            probe_ips = [ip for ip in ips if ip not in in_use]
+            if not probe_ips:
+                return
+            matched = await hass.async_add_executor_job(
+                probe_candidate_ips, unreachable, probe_ips
+            )
+            moved = {
+                serial: ip
+                for serial, ip in matched.items()
+                if ip != unreachable[serial].get("address")
+            }
+            for serial, ip in moved.items():
+                table[serial]["address"] = ip
+                table[serial]["reachable"] = True
+
+        if not moved:
+            return
+        await hass.async_add_executor_job(
+            save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
+        )
+        _LOGGER.warning("Kumo unit(s) found at new address %s; reloading", moved)
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Background rediscovery encountered error: %s", err)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):

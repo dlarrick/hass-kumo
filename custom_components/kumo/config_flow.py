@@ -134,7 +134,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Kumo."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     async def async_step_dhcp(self, discovery_info: DhcpServiceInfo):
         """Handle discovery of a Kumo adapter via DHCP."""
