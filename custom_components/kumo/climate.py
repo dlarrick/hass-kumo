@@ -31,6 +31,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_platform
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +44,22 @@ ATTR_DEFROST = "defrost"
 ATTR_RSSI = "rssi"
 ATTR_SENSOR_RSSI = "sensor_rssi"
 ATTR_RUNSTATE = "runstate"
+ATTR_TEMP_SOURCE = "temp_source"
+ATTR_ACTIVE_THERMISTOR = "active_thermistor"
+
+SERVICE_SET_TEMP_SOURCE = "set_temp_source"
+SERVICE_SET_ROOM_TEMPERATURE = "set_room_temperature"
+# Sources pykumo accepts. "api" makes the unit regulate on a temperature sent with
+# set_room_temperature.
+TEMP_SOURCES = [
+    "api",
+    "returnair",
+    "remote",
+    "sensor0",
+    "sensor1",
+    "sensor2",
+    "sensor3",
+]
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -107,6 +124,22 @@ async def async_setup_entry(
     if not entities:
         raise ConfigEntryNotReady("Kumo integration found no indoor units")
     async_add_entities(entities, True)
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_SET_TEMP_SOURCE,
+        {vol.Required("source"): vol.In(TEMP_SOURCES)},
+        "async_set_temp_source",
+    )
+    platform.async_register_entity_service(
+        SERVICE_SET_ROOM_TEMPERATURE,
+        {
+            vol.Required("temperature"): vol.All(
+                vol.Coerce(float), vol.Range(min=-10, max=40)
+            )
+        },
+        "async_set_room_temperature",
+    )
 
 
 MAINTENANCE_BUFFER_F = 0.5
@@ -582,8 +615,49 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             attr[ATTR_SENSOR_RSSI] = self._sensor_rssi
         if self._runstate is not None:
             attr[ATTR_RUNSTATE] = self._runstate
+        temp_source = self._pykumo.get_temp_source()
+        if temp_source is not None:
+            attr[ATTR_TEMP_SOURCE] = temp_source
+        active_thermistor = self._pykumo.get_active_thermistor()
+        if active_thermistor is not None:
+            attr[ATTR_ACTIVE_THERMISTOR] = active_thermistor
 
         return attr
+
+    async def async_set_temp_source(self, source):
+        """Set which temperature the unit regulates on.
+
+        "api" means the temperature sent with set_room_temperature.
+        """
+        if not self.available:
+            _LOGGER.warning("Kumo %s is not available", self._name)
+            return
+        response = await self.hass.async_add_executor_job(
+            self._pykumo.set_temp_source, source
+        )
+        _LOGGER.debug(
+            "Kumo %s set temp source %s response: %s", self._name, source, response
+        )
+        self._schedule_refresh()
+
+    async def async_set_room_temperature(self, temperature):
+        """Send the unit a room temperature from another sensor.
+
+        Only used while the temp source is "api". The unit treats the value as stale
+        if it isn't re-sent every few minutes, and then falls back to its own sensor.
+        """
+        if not self.available:
+            _LOGGER.warning("Kumo %s is not available", self._name)
+            return
+        response = await self.hass.async_add_executor_job(
+            self._pykumo.set_injected_room_temp, temperature
+        )
+        _LOGGER.debug(
+            "Kumo %s injected room temperature %s response: %s",
+            self._name,
+            temperature,
+            response,
+        )
 
     @property
     def device_info(self):
