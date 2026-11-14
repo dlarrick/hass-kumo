@@ -13,21 +13,18 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.json import save_json
-from homeassistant.util.json import load_json
 
 from .const import (
     CONF_CONNECT_TIMEOUT,
-    CONF_PREFER_CACHE,
     CONF_RESPONSE_TIMEOUT,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DHCP_DISCOVERED_KEY,
     DOMAIN,
-    KUMO_CONFIG_CACHE,
     PLATFORMS,
 )
 from .coordinator import KumoDataUpdateCoordinator
+from .storage import async_load_kumo_cache, async_save_kumo_cache
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,16 +74,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: KumoConfigEntry):
     """Setup Kumo Entry"""
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
-    prefer_cache = entry.data.get(CONF_PREFER_CACHE)
 
-    # Load cached config if available
-    cached_dict = await hass.async_add_executor_job(
-        load_json, hass.config.path(KUMO_CONFIG_CACHE)
-    )
-    if not isinstance(cached_dict, list) or len(cached_dict) < 3:
-        cached_dict = None
+    # Load cached config if available (migrating from legacy kumo_cache.json once)
+    cached_dict = await async_load_kumo_cache(hass)
 
-    # Initialize account and try setup
+    # Initialize account and try setup (always prefer local cache on startup)
     account = pykumo.KumoCloudAccount(username, password, kumo_dict=cached_dict)
     candidate_ips = hass.data.get(DHCP_DISCOVERED_KEY, {})
 
@@ -96,9 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: KumoConfigEntry):
     # HA cancels it, taking ALL units down. Setup now uses cached addresses only;
     # discovery for unreachable units runs in the background after setup.
     try:
-        setup_success = await hass.async_add_executor_job(
-            account.try_setup, {}, prefer_cache
-        )
+        setup_success = await hass.async_add_executor_job(account.try_setup, {}, True)
     except (ConnectionError, OSError) as err:
         raise ConfigEntryNotReady(
             f"Kumo setup failed due to network error: {err}"
@@ -115,9 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: KumoConfigEntry):
         raise ConfigEntryNotReady("Could not load config from KumoCloud")
 
     # Save updated config for next time
-    await hass.async_add_executor_job(
-        save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
-    )
+    await async_save_kumo_cache(hass, account.get_raw_json())
     _LOGGER.info("Kumo setup successful")
 
     settings = KumoCloudSettings(account, entry.data, entry.options)
@@ -235,9 +223,7 @@ async def _async_rediscover(hass, entry, account, unreachable, candidate_ips):
 
         if not moved:
             return
-        await hass.async_add_executor_job(
-            save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
-        )
+        await async_save_kumo_cache(hass, account.get_raw_json())
         _LOGGER.warning("Kumo unit(s) found at new address %s; reloading", moved)
         hass.config_entries.async_schedule_reload(entry.entry_id)
     except Exception as err:  # noqa: BLE001
