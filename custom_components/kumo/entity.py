@@ -12,6 +12,8 @@ from .coordinator import KumoDataUpdateCoordinator
 class CoordinatedKumoEntity(CoordinatorEntity):
     """Defines a base Kumo entity."""
 
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: KumoDataUpdateCoordinator) -> None:
         """Initialize the Kumo entity."""
         super().__init__(coordinator)
@@ -35,8 +37,3 @@ class CoordinatedKumoEntity(CoordinatorEntity):
     def available(self):
         """Return whether Home Assistant is able to read the state and control the underlying device."""
         return self._coordinator.get_available()
-
-    @property
-    def name(self):
-        """Return the name of the thermostat, if any."""
-        return self._name

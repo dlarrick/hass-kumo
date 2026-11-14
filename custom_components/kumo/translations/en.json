@@ -97,5 +97,30 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "current_humidity": {
+        "name": "Current humidity"
+      },
+      "current_temperature": {
+        "name": "Current temperature"
+      },
+      "last_hvac_mode": {
+        "name": "Last HVAC mode"
+      },
+      "sensor_battery": {
+        "name": "Sensor battery"
+      },
+      "sensor_signal_strength": {
+        "name": "Sensor signal strength"
+      },
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "signal_strength": {
+        "name": "WiFi Signal strength"
+      }
+    }
   }
 }
