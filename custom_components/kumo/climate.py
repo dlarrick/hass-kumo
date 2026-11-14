@@ -9,7 +9,6 @@ from homeassistant.components.climate import ClimateEntity
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 
 from . import KumoConfigEntry
-from .const import DOMAIN
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
 from .last_hvac_mode import get_last_hvac_mode, set_last_hvac_mode_value
@@ -131,6 +130,8 @@ MAINTENANCE_BUFFER_C = 0.3
 
 class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
     """Representation of a Kumo Thermostat device."""
+
+    _attr_name = None
 
     _update_properties = [
         "current_humidity",
@@ -665,15 +666,6 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             celsius,
             response,
         )
-
-    @property
-    def device_info(self):
-        """Return device information for this Kumo Thermostat"""
-        return {
-            "identifiers": {(DOMAIN, self._identifier)},
-            "name": self.name,
-            "manufacturer": "Mitsubishi",
-        }
 
     async def _delayed_refresh(self) -> None:
         """Wait briefly for the unit to apply a command, then refresh coordinator state."""
