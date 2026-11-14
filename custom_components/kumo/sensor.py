@@ -4,12 +4,10 @@ import logging
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 
-from .const import DOMAIN, KUMO_DATA_COORDINATORS
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
 from .temperature import c_to_f
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS,
     UnitOfTemperature,
@@ -21,7 +19,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from . import KUMO_DATA
+from . import KumoConfigEntry
 from .last_hvac_mode import (
     get_last_hvac_mode_value,
     register_last_hvac_mode_listener,
@@ -32,11 +30,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+    hass: HomeAssistant, entry: KumoConfigEntry, async_add_entities
 ):
     """Set up the Kumo thermostats."""
-    account = hass.data[DOMAIN][entry.entry_id][KUMO_DATA].get_account()
-    coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
+    account = entry.runtime_data.settings.get_account()
+    coordinators = entry.runtime_data.coordinators
 
     entities = []
     all_serials = await hass.async_add_executor_job(account.get_all_units)

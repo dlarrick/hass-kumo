@@ -8,7 +8,8 @@ import voluptuous as vol
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 
-from .const import DOMAIN, KUMO_DATA, KUMO_DATA_COORDINATORS
+from . import KumoConfigEntry
+from .const import DOMAIN
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
 from .last_hvac_mode import get_last_hvac_mode, set_last_hvac_mode_value
@@ -22,9 +23,8 @@ from homeassistant.components.climate.const import (
     HVACMode,
     ClimateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 
 _LOGGER = logging.getLogger(__name__)
@@ -94,11 +94,11 @@ KUMO_STATE_TO_HA_ACTION = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+    hass: HomeAssistant, entry: KumoConfigEntry, async_add_entities
 ):
     """Set up the Kumo thermostats."""
-    account = hass.data[DOMAIN][entry.entry_id][KUMO_DATA].get_account()
-    coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
+    account = entry.runtime_data.settings.get_account()
+    coordinators = entry.runtime_data.coordinators
 
     entities = []
     indoor_unit_serials = await hass.async_add_executor_job(account.get_indoor_units)
@@ -153,7 +153,6 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         """Initialize the thermostat."""
 
         super().__init__(coordinator)
-        coordinator.add_update_method(self.update)
         self._name = self._pykumo.get_name()
         self._target_temperature = None
         self._target_temperature_low = None
@@ -266,8 +265,20 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
         # For backwards compatibility, this ID is considered the primary
         return self._identifier
 
-    async def update(self):
-        """Call from HA to trigger a refresh of cached state."""
+    async def async_added_to_hass(self) -> None:
+        """Populate cached state if the coordinator has already refreshed."""
+        await super().async_added_to_hass()
+        if self.coordinator.last_update_success:
+            self._refresh_state()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh cached state when the coordinator updates."""
+        self._refresh_state()
+        super()._handle_coordinator_update()
+
+    def _refresh_state(self) -> None:
+        """Refresh cached properties and capabilities from pykumo."""
         for prop in KumoThermostat._update_properties:
             self._update_property(prop)
             if not self.available:
