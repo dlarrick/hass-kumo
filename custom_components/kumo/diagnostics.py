@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import DOMAIN, KUMO_DATA, KUMO_DATA_COORDINATORS
+from . import KumoConfigEntry
 
 TO_REDACT = {
     "username",
@@ -26,11 +25,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: KumoConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    kumo_settings = hass.data[DOMAIN][entry.entry_id][KUMO_DATA]
-    account = kumo_settings.get_account()
+    account = entry.runtime_data.settings.get_account()
 
     # Redact config entry and raw account JSON
     return {
@@ -41,14 +39,14 @@ async def async_get_config_entry_diagnostics(
 
 async def async_get_device_diagnostics(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: KumoConfigEntry,
     device: DeviceEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a specific device."""
     # Find the coordinator for this device
     # hass-kumo stores coordinators by serial number
     serial = next(iter(device.identifiers))[1]
-    coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
+    coordinators = entry.runtime_data.coordinators
     coordinator = coordinators.get(serial)
 
     if not coordinator:

@@ -1,20 +1,21 @@
 """Support for Mitsubishi KumoCloud devices."""
 
 import asyncio
-import logging
-import json
 import binascii
+from dataclasses import dataclass
 from datetime import timedelta
+import json
+import logging
 
 import homeassistant.helpers.config_validation as cv
 import pykumo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.util.json import load_json
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.json import save_json
+from homeassistant.util.json import load_json
 
-from .coordinator import KumoDataUpdateCoordinator
 from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_PREFER_CACHE,
@@ -24,10 +25,9 @@ from .const import (
     DHCP_DISCOVERED_KEY,
     DOMAIN,
     KUMO_CONFIG_CACHE,
-    KUMO_DATA,
-    KUMO_DATA_COORDINATORS,
     PLATFORMS,
 )
+from .coordinator import KumoDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,10 +62,19 @@ class KumoCloudSettings:
         return self._account.get_raw_json()
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+@dataclass
+class KumoRuntimeData:
+    """Runtime data for a Kumo config entry."""
+
+    settings: KumoCloudSettings
+    coordinators: dict[str, KumoDataUpdateCoordinator]
+
+
+type KumoConfigEntry = ConfigEntry[KumoRuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: KumoConfigEntry):
     """Setup Kumo Entry"""
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN].setdefault(entry.entry_id, {})
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     prefer_cache = entry.data.get(CONF_PREFER_CACHE)
@@ -91,76 +100,74 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             account.try_setup, {}, prefer_cache
         )
     except (ConnectionError, OSError) as err:
-        _LOGGER.warning("Kumo setup failed due to network error: %s", err)
-        return False
+        raise ConfigEntryNotReady(
+            f"Kumo setup failed due to network error: {err}"
+        ) from err
     except (json.JSONDecodeError, binascii.Error, ValueError) as err:
-        _LOGGER.error("Kumo setup failed due to malformed cached data: %s", err)
-        return False
+        raise ConfigEntryNotReady(
+            f"Kumo setup failed due to malformed cached data: {err}"
+        ) from err
     except Exception:
         _LOGGER.exception("Unexpected error during Kumo setup")
         raise
 
-    if setup_success:
-        # Save updated config for next time
-        await hass.async_add_executor_job(
-            save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
-        )
-        _LOGGER.info("Kumo setup successful")
+    if not setup_success:
+        raise ConfigEntryNotReady("Could not load config from KumoCloud")
 
-        hass.data[DOMAIN][entry.entry_id][KUMO_DATA] = KumoCloudSettings(
-            account, entry.data, entry.options
-        )
+    # Save updated config for next time
+    await hass.async_add_executor_job(
+        save_json, hass.config.path(KUMO_CONFIG_CACHE), account.get_raw_json()
+    )
+    _LOGGER.info("Kumo setup successful")
 
-        # Create a data coordinator for each Kumo device
-        hass.data[DOMAIN][entry.entry_id].setdefault(KUMO_DATA_COORDINATORS, {})
-        coordinators = hass.data[DOMAIN][entry.entry_id][KUMO_DATA_COORDINATORS]
-        connect_timeout = float(entry.options.get(CONF_CONNECT_TIMEOUT, "1.2"))
-        response_timeout = float(entry.options.get(CONF_RESPONSE_TIMEOUT, "8"))
-        timeouts = (connect_timeout, response_timeout)
-        scan_interval_secs = float(
-            entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        )
-        update_interval = timedelta(seconds=scan_interval_secs)
-        # Skip pykumo's serial status poll (one dead unit = ~30 s
-        # each); poll all units in parallel instead, so a dead adapter only
-        # marks its own entity unavailable.
-        pykumos = await hass.async_add_executor_job(
-            account.make_pykumos, timeouts, False
-        )
-        for device in pykumos.values():
-            if device.get_serial() not in coordinators:
-                coordinators[device.get_serial()] = KumoDataUpdateCoordinator(
-                    hass, device, config_entry=entry, update_interval=update_interval
-                )
-        await asyncio.gather(
-            *(coordinator.async_refresh() for coordinator in coordinators.values())
-        )
+    settings = KumoCloudSettings(account, entry.data, entry.options)
 
-        unreachable = _unreachable_units(account)
-        if unreachable:
-            _LOGGER.warning(
-                "Kumo loaded without %d unreachable unit(s): %s",
-                len(unreachable),
-                ", ".join(
-                    account.get_name(s) or u.get("label") or s
-                    for s, u in unreachable.items()
-                ),
+    # Create a data coordinator for each Kumo device
+    coordinators: dict[str, KumoDataUpdateCoordinator] = {}
+    connect_timeout = float(entry.options.get(CONF_CONNECT_TIMEOUT, "1.2"))
+    response_timeout = float(entry.options.get(CONF_RESPONSE_TIMEOUT, "8"))
+    timeouts = (connect_timeout, response_timeout)
+    scan_interval_secs = float(
+        entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    )
+    update_interval = timedelta(seconds=scan_interval_secs)
+    # Skip pykumo's serial status poll (one dead unit = ~30 s
+    # each); poll all units in parallel instead, so a dead adapter only
+    # marks its own entity unavailable.
+    pykumos = await hass.async_add_executor_job(account.make_pykumos, timeouts, False)
+    for device in pykumos.values():
+        if device.get_serial() not in coordinators:
+            coordinators[device.get_serial()] = KumoDataUpdateCoordinator(
+                hass, device, config_entry=entry, update_interval=update_interval
             )
-            if candidate_ips:
-                entry.async_create_background_task(
-                    hass,
-                    _async_rediscover(
-                        hass, entry, account, unreachable, dict(candidate_ips)
-                    ),
-                    "kumo_rediscover",
-                )
+    await asyncio.gather(
+        *(coordinator.async_refresh() for coordinator in coordinators.values())
+    )
 
-        entry.async_on_unload(entry.add_update_listener(_async_options_updated))
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-        return True
+    entry.runtime_data = KumoRuntimeData(settings=settings, coordinators=coordinators)
 
-    _LOGGER.warning("Could not load config from KumoCloud")
-    return False
+    unreachable = _unreachable_units(account)
+    if unreachable:
+        _LOGGER.warning(
+            "Kumo loaded without %d unreachable unit(s): %s",
+            len(unreachable),
+            ", ".join(
+                account.get_name(s) or u.get("label") or s
+                for s, u in unreachable.items()
+            ),
+        )
+        if candidate_ips:
+            entry.async_create_background_task(
+                hass,
+                _async_rediscover(
+                    hass, entry, account, unreachable, dict(candidate_ips)
+                ),
+                "kumo_rediscover",
+            )
+
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry):
@@ -237,10 +244,6 @@ async def _async_rediscover(hass, entry, account, unreachable, candidate_ips):
         _LOGGER.warning("Background rediscovery encountered error: %s", err)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: KumoConfigEntry) -> bool:
     """Unload Entry"""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

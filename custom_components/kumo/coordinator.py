@@ -1,9 +1,7 @@
 """Coordinator to gather data for the Kumo integration"""
 
 import logging
-from collections.abc import Awaitable, Callable
 from datetime import timedelta
-from typing import TypeVar
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -18,8 +16,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 class KumoDataUpdateCoordinator(DataUpdateCoordinator):
@@ -36,7 +32,6 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
         self.device = device
         self._available = False
         self._unavailable_count = 0
-        self._additional_update_methods = []
         super().__init__(
             hass,
             _LOGGER,
@@ -64,18 +59,11 @@ class KumoDataUpdateCoordinator(DataUpdateCoordinator):
     def get_available(self) -> bool:
         return self._available
 
-    def add_update_method(self, update_method: Callable[[], Awaitable[T]]) -> None:
-        """Register update methods that will be called after updating status"""
-        self._additional_update_methods.append(update_method)
-
     async def _async_update_data(self) -> None:
         """Fetch data from Kumo device."""
         success = await self.hass.async_add_executor_job(self.device.update_status)
         self._update_availability(success)
-        if success:
-            for update_method in self._additional_update_methods:
-                await update_method()
-        else:
+        if not success:
             raise UpdateFailed(
                 f"Failed to update Kumo device: {self.device.get_name()}"
             )
