@@ -5,8 +5,8 @@ import logging
 import pprint
 
 import voluptuous as vol
-from homeassistant.components.climate import PLATFORM_SCHEMA
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.components.climate import ClimateEntity
+from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 
 from .const import DOMAIN, KUMO_DATA, KUMO_DATA_COORDINATORS
 from .coordinator import KumoDataUpdateCoordinator
@@ -14,12 +14,6 @@ from .entity import CoordinatedKumoEntity
 from .last_hvac_mode import get_last_hvac_mode, set_last_hvac_mode_value
 from .temperature import c_to_f, f_to_c
 
-try:
-    from homeassistant.components.climate import ClimateEntity
-except ImportError:
-    from homeassistant.components.climate import ClimateDevice as ClimateEntity
-
-import homeassistant.helpers.config_validation as cv
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
@@ -31,14 +25,9 @@ from homeassistant.components.climate.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 
 _LOGGER = logging.getLogger(__name__)
-
-CONF_NAME = "name"
-CONF_ADDRESS = "address"
-CONF_CONFIG = "config"
 
 ATTR_FILTER_DIRTY = "filter_dirty"
 ATTR_DEFROST = "defrost"
@@ -64,14 +53,6 @@ TEMP_SOURCES = [
     "sensor2",
     "sensor3",
 ]
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_NAME): cv.string,
-        vol.Required(CONF_ADDRESS): cv.string,
-        vol.Required(CONF_CONFIG): cv.string,
-    }
-)
 
 KUMO_STATE_AUTO = "auto"
 KUMO_STATE_AUTO_COOL = "autoCool"
@@ -127,7 +108,7 @@ async def async_setup_entry(
         _LOGGER.debug("Adding entity: %s", coordinator.get_device().get_name())
     if not entities:
         raise ConfigEntryNotReady("Kumo integration found no indoor units")
-    async_add_entities(entities, True)
+    async_add_entities(entities)
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
