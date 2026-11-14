@@ -50,5 +50,27 @@
         }
       }
     }
+  },
+  "services": {
+    "set_temp_source": {
+      "name": "Set temperature source",
+      "description": "Choose which temperature the indoor unit regulates on. \"api\" uses the temperature sent with Set room temperature.",
+      "fields": {
+        "source": {
+          "name": "Source",
+          "description": "api, returnair, remote or sensor0-sensor3."
+        }
+      }
+    },
+    "set_room_temperature": {
+      "name": "Set room temperature",
+      "description": "Send the indoor unit a room temperature from another sensor. Needs the temperature source set to \"api\"; re-send every few minutes or the unit falls back to its own sensor.",
+      "fields": {
+        "temperature": {
+          "name": "Temperature",
+          "description": "Room temperature in Home Assistant's temperature unit (Celsius or Fahrenheit). Fahrenheit is converted to Celsius for the unit."
+        }
+      }
+    }
   }
 }

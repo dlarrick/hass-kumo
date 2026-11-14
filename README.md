@@ -131,6 +131,42 @@ Use the standard `climate` service calls to control or automate each unit. Avail
 Specific support and behavior can vary, depending on the capabilities of your indoor unit.
 When `climate.turn_on` is called, the integration restores the last active HVAC mode for that unit using the `Last HVAC Mode` sensor.
 
+### Using a different temperature sensor
+
+Wall units mounted high up often read well above the temperature where people are. The integration can send the
+unit a room temperature from any other Home Assistant sensor, and the unit then regulates on that reading instead
+of its own:
+
+- `kumo.set_temp_source` with `source: api` switches the unit to the injected temperature.
+- `kumo.set_room_temperature` with `temperature: <value>` sends it, in Home Assistant's temperature unit
+  (Fahrenheit is converted to Celsius for the unit). Re-send it every few minutes: the unit ignores
+  a stale value and falls back to its own sensor, so it fails safe if Home Assistant stops.
+
+The `temp_source` and `active_thermistor` attributes show what the unit is using (`active_thermistor` is `api`
+while an injected temperature is live). Example automation:
+
+```yaml
+automation:
+  - alias: Living room mini split uses the room sensor
+    triggers:
+      - trigger: time_pattern
+        minutes: /2
+    conditions:
+      - condition: template
+        value_template: "{{ states('sensor.living_room_temperature') | is_number }}"
+    actions:
+      - if: "{{ state_attr('climate.living_room', 'temp_source') != 'api' }}"
+        then:
+          - action: kumo.set_temp_source
+            target: {entity_id: climate.living_room}
+            data: {source: api}
+      - action: kumo.set_room_temperature
+        target: {entity_id: climate.living_room}
+        data: {temperature: "{{ states('sensor.living_room_temperature') }}"}
+```
+
+Not every adapter firmware may support this; if `active_thermistor` never shows `api`, yours doesn't.
+
 ## Home Assistant Sensors
 
 Useful information from indoor units is provided as attributes on the associated `climate` entity. This data can be turned into sensors in one of two ways: sensors provided by the integration, or template sensors from the main entity's attributes.
