@@ -68,7 +68,7 @@
       "fields": {
         "temperature": {
           "name": "Temperature",
-          "description": "Room temperature in the unit's configured temperature unit."
+          "description": "Room temperature in Home Assistant's temperature unit (Celsius or Fahrenheit). Fahrenheit is converted to Celsius for the unit."
         }
       }
     }

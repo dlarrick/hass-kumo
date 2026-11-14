@@ -31,6 +31,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,6 +50,9 @@ ATTR_ACTIVE_THERMISTOR = "active_thermistor"
 
 SERVICE_SET_TEMP_SOURCE = "set_temp_source"
 SERVICE_SET_ROOM_TEMPERATURE = "set_room_temperature"
+# Plausible room temperatures, in Celsius, for set_room_temperature.
+ROOM_TEMP_MIN_C = -10
+ROOM_TEMP_MAX_C = 40
 # Sources pykumo accepts. "api" makes the unit regulate on a temperature sent with
 # set_room_temperature.
 TEMP_SOURCES = [
@@ -134,9 +138,7 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         SERVICE_SET_ROOM_TEMPERATURE,
         {
-            vol.Required("temperature"): vol.All(
-                vol.Coerce(float), vol.Range(min=-10, max=40)
-            )
+            vol.Required("temperature"): vol.Coerce(float),
         },
         "async_set_room_temperature",
     )
@@ -643,19 +645,32 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
     async def async_set_room_temperature(self, temperature):
         """Send the unit a room temperature from another sensor.
 
+        The temperature is in the entity's native unit; the unit itself takes Celsius.
         Only used while the temp source is "api". The unit treats the value as stale
         if it isn't re-sent every few minutes, and then falls back to its own sensor.
         """
         if not self.available:
             _LOGGER.warning("Kumo %s is not available", self._name)
             return
+        if self.native_temperature_unit == UnitOfTemperature.FAHRENHEIT:
+            # Plain arithmetic, not the setpoint lookup table: this is a measured
+            # temperature, not one of the unit's setpoint steps.
+            celsius = (temperature - 32) * 5 / 9
+        else:
+            celsius = temperature
+        if not ROOM_TEMP_MIN_C <= celsius <= ROOM_TEMP_MAX_C:
+            raise ServiceValidationError(
+                f"Room temperature {temperature} {self.native_temperature_unit} is "
+                f"outside {ROOM_TEMP_MIN_C}-{ROOM_TEMP_MAX_C} °C"
+            )
         response = await self.hass.async_add_executor_job(
-            self._pykumo.set_injected_room_temp, temperature
+            self._pykumo.set_injected_room_temp, round(celsius, 1)
         )
         _LOGGER.debug(
-            "Kumo %s injected room temperature %s response: %s",
+            "Kumo %s injected room temperature %s (%.1f C) response: %s",
             self._name,
             temperature,
+            celsius,
             response,
         )
 

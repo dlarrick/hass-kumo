@@ -138,7 +138,8 @@ unit a room temperature from any other Home Assistant sensor, and the unit then 
 of its own:
 
 - `kumo.set_temp_source` with `source: api` switches the unit to the injected temperature.
-- `kumo.set_room_temperature` with `temperature: <value>` sends it. Re-send it every few minutes: the unit ignores
+- `kumo.set_room_temperature` with `temperature: <value>` sends it, in Home Assistant's temperature unit
+  (Fahrenheit is converted to Celsius for the unit). Re-send it every few minutes: the unit ignores
   a stale value and falls back to its own sensor, so it fails safe if Home Assistant stops.
 
 The `temp_source` and `active_thermistor` attributes show what the unit is using (`active_thermistor` is `api`

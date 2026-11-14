@@ -29,6 +29,6 @@ set_room_temperature:
       selector:
         number:
           min: -10
-          max: 40
+          max: 110
           step: 0.1
           mode: box
