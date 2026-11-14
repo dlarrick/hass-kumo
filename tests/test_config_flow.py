@@ -139,3 +139,98 @@ async def test_dhcp_discovery_already_configured(hass: HomeAssistant):
 
     # Verify reload was scheduled
     mock_reload.assert_called_once_with(entry.entry_id)
+
+
+async def test_options_flow_timeout_settings(hass: HomeAssistant):
+    """Test updating timeout settings via options flow."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "u", "password": "p"},
+        options={"connect_timeout": 2.0, "response_timeout": 10.0},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result2 = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"edit_selection": "Timeouts"}
+    )
+    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["step_id"] == "timeout_settings"
+
+    result3 = await hass.config_entries.options.async_configure(
+        result2["flow_id"],
+        user_input={
+            "connect_timeout": 3.0,
+            "response_timeout": 12.0,
+            "scan_interval": 45,
+            "post_command_refresh_delay": 1.5,
+        },
+    )
+    assert result3["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result3["data"] == {
+        "connect_timeout": 3.0,
+        "response_timeout": 12.0,
+        "scan_interval": 45,
+        "post_command_refresh_delay": 1.5,
+    }
+
+
+async def test_options_flow_unit_select_preserves_options(hass: HomeAssistant):
+    """Test editing a unit IP via options flow preserves existing options."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    existing_options = {
+        "connect_timeout": 2.5,
+        "response_timeout": 9.0,
+        "scan_interval": 30,
+        "post_command_refresh_delay": 1.0,
+    }
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "u", "password": "p"},
+        options=existing_options,
+    )
+    entry.add_to_hass(hass)
+
+    kumo_cache = [
+        {},
+        {},
+        {
+            "children": [
+                {
+                    "zoneTable": {
+                        "SERIAL1": {"label": "Living Room", "address": "192.168.1.10"}
+                    }
+                }
+            ]
+        },
+    ]
+
+    with (
+        patch("custom_components.kumo.config_flow.load_json", return_value=kumo_cache),
+        patch("custom_components.kumo.config_flow.save_json") as mock_save,
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result2 = await hass.config_entries.options.async_configure(
+            result["flow_id"], user_input={"edit_selection": "Unit Settings"}
+        )
+        assert result2["type"] == data_entry_flow.FlowResultType.FORM
+        assert result2["step_id"] == "unit_select"
+
+        result3 = await hass.config_entries.options.async_configure(
+            result2["flow_id"],
+            user_input={"unit_label": "Living Room", "ip_address": "192.168.1.20"},
+        )
+
+    assert result3["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result3["data"] == existing_options
+    mock_save.assert_called_once()
+    assert (
+        kumo_cache[2]["children"][0]["zoneTable"]["SERIAL1"]["address"]
+        == "192.168.1.20"
+    )

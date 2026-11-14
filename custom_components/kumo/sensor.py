@@ -2,20 +2,13 @@
 
 import logging
 
-import voluptuous as vol
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 
 from .const import DOMAIN, KUMO_DATA_COORDINATORS
 from .coordinator import KumoDataUpdateCoordinator
 from .entity import CoordinatedKumoEntity
 from .temperature import c_to_f
 
-try:
-    from homeassistant.components.sensor import SensorEntity
-except ImportError:
-    from homeassistant.components.sensor import SensorDevice as SensorEntity
-
-import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS,
@@ -25,7 +18,6 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -37,18 +29,6 @@ from .last_hvac_mode import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-CONF_NAME = "name"
-CONF_ADDRESS = "address"
-CONF_CONFIG = "config"
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_NAME): cv.string,
-        vol.Required(CONF_ADDRESS): cv.string,
-        vol.Required(CONF_CONFIG): cv.string,
-    }
-)
 
 
 async def async_setup_entry(
@@ -101,7 +81,7 @@ async def async_setup_entry(
         )
 
     if entities:
-        async_add_entities(entities, True)
+        async_add_entities(entities)
 
 
 class KumoCurrentHumidity(CoordinatedKumoEntity, SensorEntity):

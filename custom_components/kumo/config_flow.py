@@ -6,10 +6,7 @@ import os
 import voluptuous as vol
 from homeassistant import config_entries, core, exceptions
 
-try:
-    from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-except ImportError:
-    from homeassistant.components.dhcp import DhcpServiceInfo
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 from homeassistant.core import callback
 from homeassistant.util.json import load_json
 from homeassistant.helpers.json import save_json
@@ -269,15 +266,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler()
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for Kumo."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -302,7 +295,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        current = self._config_entry.options
+        current = self.config_entry.options
         data_schema = vol.Schema(
             {
                 vol.Required(
@@ -349,7 +342,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             await self.hass.async_add_executor_job(
                 save_json, self.hass.config.path(KUMO_CONFIG_CACHE), kumo_cache
             )
-            return self.async_create_entry(title="", data=None)
+            return self.async_create_entry(
+                title="", data=dict(self.config_entry.options)
+            )
 
         data_schema = vol.Schema(
             {

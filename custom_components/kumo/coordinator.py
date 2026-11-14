@@ -13,11 +13,11 @@ from pykumo import PyKumoBase
 from .const import (
     CONF_POST_COMMAND_REFRESH_DELAY,
     DEFAULT_POST_COMMAND_REFRESH_DELAY,
+    MAX_AVAILABILITY_TRIES,
     SCAN_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
-MAX_AVAILABILITY_TRIES = 3
 
 T = TypeVar("T")
 

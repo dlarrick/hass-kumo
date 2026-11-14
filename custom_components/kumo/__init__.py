@@ -8,7 +8,6 @@ from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 import pykumo
-import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -33,20 +32,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.Schema(
-            {
-                vol.Required(CONF_USERNAME): cv.string,
-                vol.Required(CONF_PASSWORD): cv.string,
-                vol.Optional(CONF_PREFER_CACHE, default=False): cv.boolean,
-                vol.Optional(CONF_CONNECT_TIMEOUT): float,
-                vol.Optional(CONF_RESPONSE_TIMEOUT): float,
-            }
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 class KumoCloudSettings:
@@ -253,16 +239,8 @@ async def _async_rediscover(hass, entry, account, unreachable, candidate_ips):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload Entry"""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id, None)
 
-    all_ok = True
-    for platform in PLATFORMS:
-        unload_ok = await hass.config_entries.async_forward_entry_unload(
-            entry, platform
-        )
-        if not unload_ok:
-            all_ok = False
-
-    if all_ok:
-        hass.data[DOMAIN][entry.entry_id].pop(KUMO_DATA_COORDINATORS, None)
-
-    return all_ok
+    return unload_ok
