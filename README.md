@@ -44,15 +44,16 @@ Configure Kumo using the Home Assistant user interface.
 1. In Home Assistant, go to Settings ➤ Devices & Services ➤ Integrations, and click **➕ Add Integration**.
 2. Search for "Kumo" and select the **Kumo** item.
 3. When prompted, enter your KumoCloud username (email address) and password.
-4. You can also enable the `prefer_cache` setting in this dialog. See details below.
-5. Click **Submit** to enable the integration and begin device discovery.
-6. Once discovery is complete:
+4. Click **Submit** to enable the integration and begin device discovery.
+5. Once discovery is complete:
    - You'll be prompted to assign a room (Area in Home Assistant terminology) for all discovered devices.
    - You _might_ be prompted to assign IP addresses for devices where Kumo didn’t receive an IP address from the KumoCloud service. See details below.
 
-Once the Kumo integration is added, you'll have a card for it on the Integrations page. (Integrations are sorted by name, and the name of this integration is "Kumo".) The Kumo integration card includes a "Configure" link. The configuration panel lets you change the default timeout values for device connections, or update IP addresses for configured units. **Important:** New values don't take effect until you restart Home Assistant.
+Once the Kumo integration is added, you'll have a card for it on the Integrations page. (Integrations are sorted by name, and the name of this integration is "Kumo".) The Kumo integration card includes a **Configure** link and a **Reconfigure** menu option:
 
-- `prefer_cache`, if set, controls whether to contact the KumoCloud servers on startup, or to prefer locally cached info on how to communicate with the indoor units. Default is `false`. When `false`, the integration will attempt to fetch current credentials from the KumoCloud V3 API on startup. If successful, it updates the local cache. If the Cloud is unreachable, it falls back to the local cache. If your configuration is static (including the units' IP addresses on your LAN), it's safe to set this to `true` to skip cloud checks entirely. This allows you to control your system even if KumoCloud or your Internet connection suffer an outage. The cache is in `config/kumo_cache.json`.
+- **Local cache & safety backup:** Kumo always prefers the locally cached unit credentials on startup (the older `prefer_cache` option has been removed; KumoCloud is only queried on startup if the cache is empty, or on demand via **Reconfigure**). The cache is stored in Home Assistant's `.storage/kumo.cache` file. On upgrade from older versions, your existing `config/kumo_cache.json` is left untouched, a one-time safety copy is saved to `config/kumo_cache.json.bak`, and neither legacy file is ever overwritten again. **Back up these files** — Mitsubishi's cloud APIs no longer reliably return the unit `password` and `cryptoSerial` keys needed for local control.
+- **Restoring unit credentials / IP addresses:** Under **Configure ➤ Unit Settings**, you can update a unit's local `ip_address` or manually re-supply its `password` (base64) and `cryptoSerial` (hex) from a backup if they are ever missing.
+- **Reauthenticate / Reconfigure:** Use **Reconfigure** (or the reauthentication prompt) on the Kumo integration card to update your KumoCloud username/password or refresh unit info from KumoCloud on demand without removing the integration.
 - `connect_timeout` and `response_timeout`, if set, control network timeouts for each command or status poll from the indoor unit(s). Increase these numbers if you see frequent log messages about timeouts. Decrease these numbers to improve overall Home Assistant responsiveness if you anticipate your units being offline.
 
 ### DHCP Discovery

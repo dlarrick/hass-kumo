@@ -2,7 +2,9 @@
   "title": "Kumo",
   "config": {
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
     },
     "error": {
       "cannot_connect": "Cannot Connect to KumoCloud, check internet connection",
@@ -13,8 +15,23 @@
       "user": {
         "data": {
           "username": "KumoCloud Username (Email Address)",
-          "password": "KumoCloud Password",
-          "prefer_cache": "Prefer Local Cache"
+          "password": "KumoCloud Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate KumoCloud",
+        "description": "Enter your updated KumoCloud credentials.",
+        "data": {
+          "username": "KumoCloud Username (Email Address)",
+          "password": "KumoCloud Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure KumoCloud",
+        "description": "Update your KumoCloud credentials and refresh unit information from KumoCloud.",
+        "data": {
+          "username": "KumoCloud Username (Email Address)",
+          "password": "KumoCloud Password"
         }
       },
       "request_ips": {
@@ -42,11 +59,19 @@
         }
       },
       "unit_select": {
-        "title": "You can set the local IP of your unit in the cache file here",
-        "description": "You must reload the integration after setting IP addresses",
+        "title": "Select Unit",
+        "description": "Choose the indoor unit to edit.",
         "data": {
-          "unit_label": "Unit Label",
-          "ip_address": "IP Address"
+          "unit_label": "Unit Label"
+        }
+      },
+      "unit_edit": {
+        "title": "Edit Unit Settings",
+        "description": "Update the local IP address or unit credentials (password, cryptoSerial). Reload the integration after saving.",
+        "data": {
+          "ip_address": "IP Address",
+          "unit_password": "Unit Password (base64)",
+          "crypto_serial": "Unit Crypto Serial (hex)"
         }
       }
     }

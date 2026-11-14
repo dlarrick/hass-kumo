@@ -31,7 +31,6 @@ async def test_user_form_invalid_auth(hass: HomeAssistant):
             {
                 "username": "test-username",
                 "password": "test-password",
-                "prefer_cache": False,
             },
         )
 
@@ -64,7 +63,6 @@ async def test_user_form_success(hass: HomeAssistant):
             {
                 "username": "test-username",
                 "password": "test-password",
-                "prefer_cache": False,
             },
         )
         await hass.async_block_till_done()
@@ -74,7 +72,6 @@ async def test_user_form_success(hass: HomeAssistant):
     assert result2["data"] == {
         "username": "test-username",
         "password": "test-password",
-        "prefer_cache": False,
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -204,7 +201,12 @@ async def test_options_flow_unit_select_preserves_options(hass: HomeAssistant):
             "children": [
                 {
                     "zoneTable": {
-                        "SERIAL1": {"label": "Living Room", "address": "192.168.1.10"}
+                        "SERIAL1": {
+                            "label": "Living Room",
+                            "address": "192.168.1.10",
+                            "password": "old-b64-password",
+                            "cryptoSerial": "0011223344",
+                        }
                     }
                 }
             ]
@@ -212,8 +214,11 @@ async def test_options_flow_unit_select_preserves_options(hass: HomeAssistant):
     ]
 
     with (
-        patch("custom_components.kumo.config_flow.load_json", return_value=kumo_cache),
-        patch("custom_components.kumo.config_flow.save_json") as mock_save,
+        patch(
+            "custom_components.kumo.config_flow.async_load_kumo_cache",
+            return_value=kumo_cache,
+        ),
+        patch("custom_components.kumo.config_flow.async_save_kumo_cache") as mock_save,
     ):
         result = await hass.config_entries.options.async_init(entry.entry_id)
         result2 = await hass.config_entries.options.async_configure(
@@ -224,13 +229,120 @@ async def test_options_flow_unit_select_preserves_options(hass: HomeAssistant):
 
         result3 = await hass.config_entries.options.async_configure(
             result2["flow_id"],
-            user_input={"unit_label": "Living Room", "ip_address": "192.168.1.20"},
+            user_input={"unit_label": "Living Room"},
+        )
+        assert result3["type"] == data_entry_flow.FlowResultType.FORM
+        assert result3["step_id"] == "unit_edit"
+
+        # Verify existing values are pre-loaded as defaults
+        schema_defaults = {k.schema: k.default() for k in result3["data_schema"].schema}
+        assert schema_defaults == {
+            "ip_address": "192.168.1.10",
+            "unit_password": "old-b64-password",
+            "crypto_serial": "0011223344",
+        }
+
+        result4 = await hass.config_entries.options.async_configure(
+            result3["flow_id"],
+            user_input={
+                "ip_address": "192.168.1.20",
+                "unit_password": "new-b64-password",
+                "crypto_serial": "deadbeef01",
+            },
         )
 
-    assert result3["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-    assert result3["data"] == existing_options
+    assert result4["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result4["data"] == existing_options
     mock_save.assert_called_once()
-    assert (
-        kumo_cache[2]["children"][0]["zoneTable"]["SERIAL1"]["address"]
-        == "192.168.1.20"
+    unit = kumo_cache[2]["children"][0]["zoneTable"]["SERIAL1"]
+    assert unit["address"] == "192.168.1.20"
+    assert unit["password"] == "new-b64-password"
+    assert unit["cryptoSerial"] == "deadbeef01"
+
+
+async def test_reauth_flow(hass: HomeAssistant):
+    """Test reauth flow updates credentials and reloads the entry."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=DOMAIN,
+        data={"username": "old-user", "password": "old-password"},
     )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+    with (
+        patch(
+            "custom_components.kumo.config_flow.KumoCloudAccount.try_setup",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.kumo.async_setup_entry",
+            return_value=True,
+        ),
+    ):
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"username": "new-user", "password": "new-password"},
+        )
+        await hass.async_block_till_done()
+
+    assert result2["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result2["reason"] == "reauth_successful"
+    assert entry.data["username"] == "new-user"
+    assert entry.data["password"] == "new-password"
+
+
+async def test_reconfigure_flow(hass: HomeAssistant):
+    """Test reconfigure flow updates credentials and merges cached addresses."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=DOMAIN,
+        data={"username": "old-user", "password": "old-password"},
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+    new_cache = [{}, {}, {"children": [{"zoneTable": {"S1": {"address": ""}}}]}]
+    old_cache = [{}, {}, {"children": [{"zoneTable": {"S1": {"address": "1.2.3.4"}}}]}]
+
+    with (
+        patch(
+            "custom_components.kumo.config_flow.KumoCloudAccount.try_setup",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.kumo.config_flow.KumoCloudAccount.get_raw_json",
+            return_value=new_cache,
+        ),
+        patch(
+            "custom_components.kumo.config_flow.async_load_kumo_cache",
+            return_value=old_cache,
+        ),
+        patch("custom_components.kumo.config_flow.async_save_kumo_cache") as mock_save,
+        patch(
+            "custom_components.kumo.async_setup_entry",
+            return_value=True,
+        ),
+    ):
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"username": "new-user", "password": "new-password"},
+        )
+        await hass.async_block_till_done()
+
+    assert result2["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result2["reason"] == "reconfigure_successful"
+    assert entry.data["username"] == "new-user"
+    assert entry.data["password"] == "new-password"
+    mock_save.assert_called_once()
+    assert new_cache[2]["children"][0]["zoneTable"]["S1"]["address"] == "1.2.3.4"
