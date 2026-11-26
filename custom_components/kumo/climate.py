@@ -753,20 +753,39 @@ class KumoThermostat(CoordinatedKumoEntity, ClimateEntity):
             if "heat" in target and target["heat"] is not None:
                 target["heat"] = f_to_c(target["heat"])
 
-        if "cool" in target:
+        if target.get("cool") is not None and target.get("heat") is not None:
+            # Set the heat_cool pair with a single adapter command so the
+            # unit can never be left holding one new setpoint and one stale
+            # one if a command is lost (see pykumo.set_auto_setpoints).
             response = await self.hass.async_add_executor_job(
-                self._pykumo.set_cool_setpoint, target["cool"]
+                self._pykumo.set_auto_setpoints, target["cool"], target["heat"]
             )
             _LOGGER.debug(
-                "Kumo %s set %s temp response: %s", self._name, "cool", str(response)
+                "Kumo %s set heat_cool temps response: %s",
+                self._name,
+                str(response),
             )
-        if "heat" in target:
-            response = await self.hass.async_add_executor_job(
-                self._pykumo.set_heat_setpoint, target["heat"]
-            )
-            _LOGGER.debug(
-                "Kumo %s set %s temp response: %s", self._name, "heat", str(response)
-            )
+        else:
+            if "cool" in target:
+                response = await self.hass.async_add_executor_job(
+                    self._pykumo.set_cool_setpoint, target["cool"]
+                )
+                _LOGGER.debug(
+                    "Kumo %s set %s temp response: %s",
+                    self._name,
+                    "cool",
+                    str(response),
+                )
+            if "heat" in target:
+                response = await self.hass.async_add_executor_job(
+                    self._pykumo.set_heat_setpoint, target["heat"]
+                )
+                _LOGGER.debug(
+                    "Kumo %s set %s temp response: %s",
+                    self._name,
+                    "heat",
+                    str(response),
+                )
 
         self._schedule_refresh()
 
